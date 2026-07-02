@@ -77,7 +77,7 @@ npm run generate:seed
 | `vibetest_guest_results` | результаты прохождения локальных тестов |
 | `vibetest_progress_{id}` | прогресс локального теста (uuid) |
 | `vibetest_progress_api_{id}` | прогресс облачного теста (numeric id) |
-| `vibetest_progress_application_{token}` | прогресс прохождения по ссылке заявки |
+| `vibetest_application_progress_{token}` | прогресс прохождения по ссылке заявки |
 
 JWT-токены в full-режиме хранятся отдельно в `AuthContext` (не в этом файле).
 
