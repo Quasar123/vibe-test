@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using VibeTest.Server.Configuration;
 using VibeTest.Server.Data.Repositories;
 using VibeTest.Server.Exceptions;
 using VibeTest.Server.Extensions;
@@ -9,6 +11,7 @@ namespace VibeTest.Server.Controllers;
 
 [ApiController]
 [Route("api/users")]
+[EnableRateLimiting(RateLimitPolicies.GlobalApi)]
 public class UsersController(IUserRepository users) : ControllerBase
 {
     [HttpGet("search")]

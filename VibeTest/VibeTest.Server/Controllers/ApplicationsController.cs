@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using VibeTest.Server.Configuration;
 using VibeTest.Server.Extensions;
 using VibeTest.Server.Models.Requests;
 using VibeTest.Server.Models.Responses;
@@ -9,6 +11,7 @@ namespace VibeTest.Server.Controllers;
 
 [ApiController]
 [Route("api/applications")]
+[EnableRateLimiting(RateLimitPolicies.GlobalApi)]
 public class ApplicationsController(IApplicationService applicationService) : ControllerBase
 {
     [HttpPost]

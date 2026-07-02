@@ -10,7 +10,7 @@ dotnet test
 Проект `VibeTest.Tests` содержит:
 
 - тесты сервисов (`TestService`, `ResultService`, `UserService`, `ApplicationService`) на SQLite;
-- тесты API через `WebApplicationFactory` (`Auth`, `Tests`, `Applications`, `Users`).
+- тесты API через `WebApplicationFactory` (`Auth`, `Tests`, `Applications`, `Users`, rate limiting, health endpoints).
 
 В среде `Testing` БД создаётся через `EnsureCreated()`; в остальных — `Migrate()`.
 
@@ -117,9 +117,26 @@ JWT-токены в full-режиме хранятся отдельно в `Auth
     "Audience": "VibeTest",
     "AccessTokenMinutes": 15,
     "RefreshTokenDays": 7
+  },
+  "Cors": {
+    "AllowedOrigins": []
+  },
+  "RateLimit": {
+    "Global": { "PermitLimit": 100, "WindowSeconds": 60 },
+    "AuthLogin": { "PermitLimit": 5, "WindowSeconds": 60 },
+    "AuthRegisterRefresh": { "PermitLimit": 10, "WindowSeconds": 60 }
   }
 }
 ```
+
+Локальные Vite origin для CORS переопределяются в `appsettings.Development.json`. Для интеграционных тестов (`Testing`) лимит `AuthLogin` снижен до `3` запросов в минуту; тест `AuthRateLimitApiTests` проверяет ответ `429` на четвёртой попытке.
+
+### Health и observability
+
+- `GET /health/live` — liveness (без проверок зависимостей)
+- `GET /health/ready` — readiness с проверкой SQLite через EF Core
+- Serilog request logging обогащается полями `RequestHost`, `RequestScheme`, `RemoteIp`, `UserId`
+- превышение rate limit логируется с методом, путём и partition key
 
 Для локальной разработки можно переопределить значения в `appsettings.Development.json`.
 

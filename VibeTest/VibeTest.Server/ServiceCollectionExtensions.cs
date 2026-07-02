@@ -56,20 +56,27 @@ public static class ServiceCollectionExtensions
 
         services.AddAuthorization();
 
+        services.Configure<CorsOptions>(configuration.GetSection(CorsOptions.SectionName));
+        var corsOptions = configuration.GetSection(CorsOptions.SectionName).Get<CorsOptions>() ?? new CorsOptions();
+
         services.AddCors(options =>
         {
             options.AddPolicy("Spa", policy =>
             {
-                policy.WithOrigins(
-                        "https://localhost:64028",
-                        "http://localhost:5173",
-                        "http://localhost:64028",
-                        "http://localhost:4173")
-                    .AllowAnyHeader()
-                    .AllowAnyMethod()
-                    .AllowCredentials();
+                if (corsOptions.AllowedOrigins.Length > 0)
+                {
+                    policy.WithOrigins(corsOptions.AllowedOrigins)
+                        .AllowAnyHeader()
+                        .AllowAnyMethod()
+                        .AllowCredentials();
+                }
             });
         });
+
+        services.AddHealthChecks()
+            .AddDbContextCheck<AppDbContext>("database", tags: ["ready"]);
+
+        services.AddVibeTestRateLimiting(configuration);
 
         return services;
     }

@@ -83,9 +83,57 @@ VITE_BASE_PATH=/vibe-test/
   },
   "Jwt": {
     "Key": "<случайная-строка-32+-символов>"
+  },
+  "Cors": {
+    "AllowedOrigins": [
+      "https://your-spa.example.com"
+    ]
+  },
+  "RateLimit": {
+    "Global": {
+      "PermitLimit": 100,
+      "WindowSeconds": 60
+    },
+    "AuthLogin": {
+      "PermitLimit": 5,
+      "WindowSeconds": 60
+    },
+    "AuthRegisterRefresh": {
+      "PermitLimit": 10,
+      "WindowSeconds": 60
+    }
   }
 }
 ```
+
+Те же ключи можно задать через переменные окружения, например `Cors__AllowedOrigins__0=https://your-spa.example.com`.
+
+### CORS
+
+Разрешённые origin SPA задаются в `Cors:AllowedOrigins`. В `Development` и `E2E` уже прописаны локальные Vite-адреса; в production список **обязателен** — в базовом `appsettings.json` он пуст.
+
+### Rate limiting
+
+Встроенный in-memory rate limiter ASP.NET Core:
+
+| Политика | Маршруты | Назначение |
+|----------|----------|------------|
+| `global-api` | все `/api/*` | общий лимит; ключ — user id (если авторизован) или IP |
+| `auth-login` | `POST /api/auth/login` | защита от перебора пароля |
+| `auth-register-refresh` | `POST /api/auth/register`, `POST /api/auth/refresh` | снижение злоупотреблений регистрацией и refresh |
+
+При превышении лимита API возвращает **429 Too Many Requests** и заголовок `Retry-After`. Отклонённые запросы пишутся в лог (`VibeTest.RateLimiting`) с методом, путём и partition key.
+
+Лимитер хранится в памяти процесса — при нескольких инстансах API перенесите ограничение на reverse proxy или распределённый store.
+
+### Health checks
+
+| Endpoint | Назначение |
+|----------|------------|
+| `GET /health/live` | liveness — процесс отвечает |
+| `GET /health/ready` | readiness — проверка доступности БД (EF Core) |
+
+Настройте пробы reverse proxy / оркестратора на эти URL. Health endpoints **не** попадают под rate limiting.
 
 Запуск API:
 
@@ -132,5 +180,7 @@ npm run e2e:full
 | `ASPNETCORE_ENVIRONMENT` | сервер | `Development`, `Production`, `E2E`, `Testing` |
 | `ConnectionStrings:DefaultConnection` | appsettings | SQLite |
 | `Jwt:*` | appsettings | ключ, issuer, сроки токенов |
+| `Cors:AllowedOrigins` | appsettings / env | разрешённые SPA origin |
+| `RateLimit:*` | appsettings / env | лимиты запросов (см. выше) |
 
 Подробнее о разработке: [development.md](development.md)

@@ -1,5 +1,8 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
+using VibeTest.Server.Configuration;
 using VibeTest.Server.Data;
 using VibeTest.Server.Middleware;
 
@@ -18,22 +21,44 @@ public static class WebApplicationExtensions
                 db.Database.Migrate();
         }
 
-        app.UseSerilogRequestLogging();
-        app.UseMiddleware<DomainExceptionMiddleware>();
-
-        if (app.Environment.IsDevelopment())
+        app.UseSerilogRequestLogging(options =>
         {
-            app.MapOpenApi();
-        }
+            options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
+            {
+                diagnosticContext.Set("RequestHost", httpContext.Request.Host.Value);
+                diagnosticContext.Set("RequestScheme", httpContext.Request.Scheme);
+                diagnosticContext.Set("RemoteIp", httpContext.Connection.RemoteIpAddress?.ToString());
+                diagnosticContext.Set("UserId", httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier));
+            };
+        });
+        app.UseMiddleware<DomainExceptionMiddleware>();
 
         if (!app.Environment.IsEnvironment("E2E") && !app.Environment.IsEnvironment("Testing"))
         {
             app.UseHttpsRedirection();
         }
 
+        app.UseRouting();
         app.UseCors("Spa");
         app.UseAuthentication();
         app.UseAuthorization();
+        app.UseRateLimiter();
+
+        if (app.Environment.IsDevelopment())
+        {
+            app.MapOpenApi();
+        }
+
+        app.MapHealthChecks("/health/live", new HealthCheckOptions
+        {
+            Predicate = _ => false
+        });
+
+        app.MapHealthChecks("/health/ready", new HealthCheckOptions
+        {
+            Predicate = check => check.Tags.Contains("ready")
+        });
+
         app.MapControllers();
 
         if (app.Environment.IsDevelopment())
