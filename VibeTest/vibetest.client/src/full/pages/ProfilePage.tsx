@@ -106,7 +106,7 @@ export function ProfilePage() {
         <ul className="full-list">
           {history.map((item) => (
             <li key={`${item.testId}-${item.completedAt}`} className="full-list__item">
-              <Link to={`/tests/${item.testId}`} className="full-list__title">
+              <Link to={`/tests/${item.testId}/play`} className="full-list__title">
                 {item.testName}
               </Link>
               <div className="full-list__meta">

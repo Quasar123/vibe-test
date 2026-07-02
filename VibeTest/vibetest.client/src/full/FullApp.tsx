@@ -13,7 +13,6 @@ import { RegisterPage } from '@/full/pages/RegisterPage';
 import { PlayPage as ApiPlayPage } from '@/full/pages/PlayPage';
 import { ApplicationPlayPage } from '@/full/pages/ApplicationPlayPage';
 import { ApplicationsPage } from '@/full/pages/ApplicationsPage';
-import { TestPage } from '@/full/pages/TestPage';
 import { EditorPage } from '@/guest/pages/EditorPage';
 import { ImportPage } from '@/guest/pages/ImportPage';
 import { InfoPage } from '@/guest/pages/InfoPage';
@@ -34,7 +33,6 @@ export function FullApp() {
             <Route path="login" element={<LoginPage />} />
             <Route path="register" element={<RegisterPage />} />
             <Route path="tests" element={<PublicTestsPage />} />
-            <Route path="tests/:id" element={<TestPage />} />
             <Route path="tests/:id/play" element={<ApiPlayPage />} />
             <Route path="application/:token" element={<ApplicationPlayPage />} />
             <Route path="play/:id" element={<LocalPlayPage />} />

@@ -113,9 +113,17 @@ export function PublicTestsPage() {
           return (
             <li key={test.id} className="full-list__item">
               <div className="full-list__title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                <Link to={`/tests/${test.id}`}>{test.name}</Link>
+                {test.name}
                 <TestDifficultyBadge difficulty={test.difficulty} />
               </div>
+              {test.description && 
+              <details className="full-list__details">
+                <summary className="full-list__details-summary">Описание</summary>
+                <div className="full-list__details-body">
+                  <p className="full-muted">{test.description}</p>
+                </div>
+              </details>
+              }
               <TestListProgressMeta
                 className="full-list__meta"
                 stats={stats}
@@ -127,6 +135,11 @@ export function PublicTestsPage() {
                   </>
                 }
               />
+              <p>
+                <Link to={`/tests/${test.id}/play`} className="full-button">
+                  Пройти тест
+                </Link>
+              </p>
             </li>
           );
         })}

@@ -163,6 +163,23 @@
   margin-top: 0.25rem;
 }
 
+.full-list__details {
+  margin-top: 0.75rem;
+}
+
+.full-list__details-summary {
+  cursor: pointer;
+  color: #9fb0c7;
+  font-size: 0.9rem;
+}
+
+.full-list__details-body {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+}
+
 .full-cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
