@@ -3,10 +3,20 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/main/VisualStudio.gitignore
 
-# sqlite
+# test creds
+test_creds.md
+
+# VibeTest runtime artifacts (SQLite, logs, E2E DB)
 *.db
 *.db-shm
 *.db-wal
+VibeTest/VibeTest.Server/db/
+VibeTest/VibeTest.Server/logs/
+VibeTest/VibeTest.Server/vibetest.e2e.db
+VibeTest/VibeTest.Server/vibetest.e2e.db-*
+
+# Visual Studio / Rider (solution-level caches)
+**/.vs/
 
 # User-specific files
 *.rsuser
@@ -58,8 +68,6 @@ bld/
 # (https://github.com/github/gitignore/pull/3736)
 #!**/[Bb]in/*.refresh
 
-# Visual Studio 2015/2017 cache/options directory
-.vs/
 # Uncomment if you have tasks that create the project's static files in wwwroot
 #wwwroot/
 
@@ -439,9 +447,3 @@ playwright-report/
 blob-report/
 playwright/.cache/
 
-# E2E SQLite database
-VibeTest/VibeTest.Server/vibetest.e2e.db
-VibeTest/VibeTest.Server/vibetest.e2e.db-*
-
-# Serilog file logs
-VibeTest/VibeTest.Server/logs/

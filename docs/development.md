@@ -9,8 +9,8 @@ dotnet test
 
 Проект `VibeTest.Tests` содержит:
 
-- тесты сервисов (`TestService`, `ResultService`, `UserService`) на SQLite;
-- тесты API через `WebApplicationFactory`.
+- тесты сервисов (`TestService`, `ResultService`, `UserService`, `ApplicationService`) на SQLite;
+- тесты API через `WebApplicationFactory` (`Auth`, `Tests`, `Applications`, `Users`).
 
 В среде `Testing` БД создаётся через `EnsureCreated()`; в остальных — `Migrate()`.
 
@@ -77,6 +77,7 @@ npm run generate:seed
 | `vibetest_guest_results` | результаты прохождения локальных тестов |
 | `vibetest_progress_{id}` | прогресс локального теста (uuid) |
 | `vibetest_progress_api_{id}` | прогресс облачного теста (numeric id) |
+| `vibetest_progress_application_{token}` | прогресс прохождения по ссылке заявки |
 
 JWT-токены в full-режиме хранятся отдельно в `AuthContext` (не в этом файле).
 
@@ -108,7 +109,7 @@ JWT-токены в full-режиме хранятся отдельно в `Auth
 ```json
 {
   "ConnectionStrings": {
-    "DefaultConnection": "Data Source=vibetest.db"
+    "DefaultConnection": "Data Source=db/vibetest.db"
   },
   "Jwt": {
     "Key": "dev-secret-key-change-in-production-32chars!",

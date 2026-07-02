@@ -710,48 +710,50 @@ public interface IUserService
 
 ## 9. Этапы разработки
 
-**Этап 1 — Сервисы и БД (текущий)**
+Ниже — исторический план и текущее состояние репозитория (все перечисленные этапы **реализованы**).
 
-Скелет уже в репозитории. Задачи:
+**Этап 1 — Сервисы и БД** ✓
 
-1. Реализовать `TestService`, `ResultService`, `UserService` (сейчас `NotImplementedException`)
-2. Дополнить репозитории запросами для пагинации и агрегаций
-3. Миграция: `dotnet ef migrations add Initial --project VibeTest.Server`
-4. Интеграционные тесты в `VibeTest.Tests` на `SqliteTestDb` (общий connection на fixture)
+- `TestService`, `ResultService`, `UserService`, `ApplicationService`, `AuthService`
+- Репозитории с пагинацией и агрегациями
+- EF Core миграции в `VibeTest.Server/Data/Migrations/` (при старте — `Migrate()`, в `Testing` — `EnsureCreated()`)
+- Интеграционные тесты сервисов в `VibeTest.Tests` на SQLite
 
-Приоритетные тест-кейсы:
-
-| Сервис | Сценарии |
-|--------|----------|
-| TestService | CreateTest + дедупликация; AppendQuestions (`MAX+1`); GetTestDetail vs GetTestFull |
+| Сервис | Покрытые сценарии |
+|--------|-------------------|
+| TestService | CreateTest + дедупликация; AppendQuestions; GetTestDetail vs GetTestFull |
 | ResultService | Submit + переответ; дорешивание после AppendQuestions; DeleteResult |
 | UserService | GetStats, own/others passing stats |
+| ApplicationService | link/internal заявки; hideResults; анонимное и персональное прохождение |
 
-**Этап 2 — API**
+**Этап 2 — API** ✓
 
-- `ServiceCollectionExtensions.AddVibeTestServices()` + `AddDbContext` в `Program.cs`
-- Контроллеры `AuthController`, `TestsController`
-- JWT-аутентификация (`IAuthService`)
-- Маппинг `DomainException` → HTTP-коды
+- `ServiceCollectionExtensions.AddVibeTestServices()` + `AddDbContext`
+- Контроллеры: `AuthController`, `TestsController`, `ResultsController`, `ApplicationsController`
+- JWT (access + refresh), `DomainExceptionMiddleware`
 - Интеграционные тесты API (`WebApplicationFactory`)
 
-**Этап 3 — Фронтенд-ядро**
+**Этап 3 — Фронтенд-ядро** ✓
 
-Параллельно два контура:
+- **guest** — `types/`, `utils/`, `guest/GuestApp.tsx`, страницы и seed
+- **full** — `full/api/client.ts`, `AuthContext`, роутинг и защищённые маршруты
+- Скрипты: `dev`, `dev:full`, `build:guest`
 
-1. **guest** — `types/`, `utils/` (storage, import, export), `guest/GuestApp.tsx`, страницы-заглушки
-2. **full** — `full/api/client.ts`, `AuthContext`, расширение роутинга
+**Этап 4 — Фронтенд-UI** ✓
 
-Скрипты: `dev` (guest), `dev:full`, `build:guest` (GitHub Pages).
+- Guest: `TestEditor`, `TestPlayer`, импорт/экспорт, PWA
+- Full: публичный каталог, профиль, облачные тесты, заявки (`/applications`, `/application/:token`)
 
-**Этап 4 — Фронтенд-UI**
+**Этап 5 — E2E-тесты** ✓
 
-- Guest: TestEditor, TestPlayer, TestResult (только localStorage)
-- Full: публичные тесты, профиль, облачное сохранение
+- Playwright: `e2e/guest`, `e2e/full`
+- CI: `.github/workflows/e2e.yml`
 
-**Этап 5 — E2E-тесты**
-- Playwright
-- Основные пользовательские сценарии
+**Дальнейшие улучшения (не блокируют текущий MVP):**
+
+- Production-раздача SPA из Kestrel или отдельного reverse proxy (см. [deployment.md](deployment.md))
+- Секреты и CORS из переменных окружения, а не из `appsettings.json`
+- Docker / docker-compose
 
 ### Деплой гостевого SPA на GitHub Pages
 

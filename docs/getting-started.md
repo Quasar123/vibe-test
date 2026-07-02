@@ -44,7 +44,7 @@ cd VibeTest
 dotnet run --project VibeTest.Server
 ```
 
-API по умолчанию слушает `https://localhost:7215` и `http://localhost:5032`. При старте применяются миграции EF к файлу `vibetest.db`.
+API по умолчанию слушает `https://localhost:7215` и `http://localhost:5032`. При старте применяются миграции EF к файлу `VibeTest.Server/db/vibetest.db`.
 
 **Терминал 2 — фронтенд:**
 
