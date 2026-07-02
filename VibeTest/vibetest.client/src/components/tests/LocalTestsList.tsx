@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { Link } from 'react-router-dom';
 import { Pagination } from '@/components/common/Pagination';
-import { TestDifficultyBadge } from '@/components/tests/TestDifficultyBadge';
+import { TestListItemCard } from '@/components/tests/TestListItemCard';
 import { TestListProgressMeta } from '@/components/tests/TestListProgressMeta';
 import { TestListToolbar } from '@/components/tests/TestListToolbar';
 import type { LocalTest } from '@/types';
@@ -48,7 +48,6 @@ export function LocalTestsList({
   onUploadToCloud,
   onDownloadJson,
 }: LocalTestsListProps) {
-  const listPrefix = listClassName;
   const raw = useSyncExternalStore(subscribe, getLocalTestsSnapshot, getLocalTestsSnapshot);
   const tests = useMemo(() => JSON.parse(raw) as LocalTest[], [raw]);
   const [page, setPage] = useState(1);
@@ -102,72 +101,61 @@ export function LocalTestsList({
           const stats = getTestProgressStats(test.questions.length, getTestProgress(test.id));
 
           return (
-            <li key={test.id} className={`${listPrefix}__item`}>
-              <div>
-                <div
-                  className={`${listPrefix}__title`}
-                  style={
-                    listClassName === 'full-list'
-                      ? { display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }
-                      : undefined
-                  }
-                >
-                  {test.name}
-                  <TestDifficultyBadge difficulty={test.difficulty} />
-                </div>
+            <TestListItemCard
+              key={test.id}
+              listClassName={listClassName}
+              title={test.name}
+              difficulty={test.difficulty}
+              description={test.description}
+              meta={
                 <TestListProgressMeta
-                  className={`${listPrefix}__meta`}
+                  className={`${listClassName}__meta`}
                   stats={stats}
                   suffix={<> · обновлён {new Date(test.updatedAt).toLocaleString()}</>}
                 />
-              </div>
-              <div
-                className={listClassName === 'guest-list' ? 'guest-list__actions' : undefined}
-                style={
-                  listClassName === 'full-list'
-                    ? { display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.5rem' }
-                    : undefined
-                }
-              >
-                <Link to={playTo(test.id)} className={buttonClassPrefix}>
-                  Пройти
-                </Link>
-                <Link to={`/editor/${test.id}`} className={ghostButton}>
-                  Редактировать
-                </Link>
-                {onDownloadJson && (
-                  <button
-                    type="button"
-                    className={ghostButton}
-                    onClick={() => onDownloadJson(test)}
-                  >
-                    Скачать JSON
-                  </button>
-                )}
-                {showCloudActions &&
-                  (isAuthenticated ? (
+              }
+              actions={
+                <>
+                  <Link to={playTo(test.id)} className={buttonClassPrefix}>
+                    Пройти
+                  </Link>
+                  <Link to={`/editor/${test.id}`} className={ghostButton}>
+                    Редактировать
+                  </Link>
+                  {onDownloadJson && (
                     <button
                       type="button"
                       className={ghostButton}
-                      disabled={uploadingId === test.id}
-                      onClick={() => void onUploadToCloud?.(test.id)}
+                      onClick={() => onDownloadJson(test)}
                     >
-                      {uploadingId === test.id ? 'Загрузка…' : 'В облако'}
+                      Скачать JSON
                     </button>
-                  ) : (
-                    <Link to={loginPath} state={loginState} className={ghostButton}>
-                      В облако
-                    </Link>
-                  ))}
-                <button
-                  type="button"
-                  className={dangerButton}
-                  onClick={() => deleteLocalTest(test.id)}
-                >
-                  Удалить
-                </button>
-              </div>
-            </li>
+                  )}
+                  {showCloudActions &&
+                    (isAuthenticated ? (
+                      <button
+                        type="button"
+                        className={ghostButton}
+                        disabled={uploadingId === test.id}
+                        onClick={() => void onUploadToCloud?.(test.id)}
+                      >
+                        {uploadingId === test.id ? 'Загрузка…' : 'В облако'}
+                      </button>
+                    ) : (
+                      <Link to={loginPath} state={loginState} className={ghostButton}>
+                        В облако
+                      </Link>
+                    ))}
+                  <button
+                    type="button"
+                    className={dangerButton}
+                    onClick={() => deleteLocalTest(test.id)}
+                  >
+                    Удалить
+                  </button>
+                </>
+              }
+            />
           );
         })}
       </ul>

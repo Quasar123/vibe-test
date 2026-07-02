@@ -398,3 +398,34 @@
 .vt-import-panel__success {
   color: #7fd4a0;
 }
+
+.test-list-card__details {
+  margin-top: 0.75rem;
+}
+
+.test-list-card__details-summary {
+  cursor: pointer;
+  color: #9fb0c7;
+  font-size: 0.9rem;
+}
+
+.test-list-card__details-body {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+}
+
+.test-list-card__description {
+  margin: 0;
+  color: #8fa0b8;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.test-list-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}

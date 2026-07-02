@@ -3,7 +3,7 @@ import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { LocalTestsList } from '@/components/tests/LocalTestsList';
 import { Pagination } from '@/components/common/Pagination';
 import { TestListProgressMeta } from '@/components/tests/TestListProgressMeta';
-import { TestDifficultyBadge } from '@/components/tests/TestDifficultyBadge';
+import { TestListItemCard } from '@/components/tests/TestListItemCard';
 import { TestListToolbar } from '@/components/tests/TestListToolbar';
 import { testsApi } from '@/full/api';
 import { getApiErrorMessage, useAuth } from '@/full/context/AuthContext';
@@ -254,70 +254,77 @@ export function MyTestsPage() {
                   const stats = statsFromDbProgress(test.questionsCount, progressByTestId[test.id]);
 
                   return (
-                    <li key={test.id} className="full-list__item">
-                      <div className="full-list__title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                        {test.name}
-                        <TestDifficultyBadge difficulty={test.difficulty} />
+                    <TestListItemCard
+                      key={test.id}
+                      listClassName="full-list"
+                      title={test.name}
+                      difficulty={test.difficulty}
+                      description={test.description}
+                      badges={
                         <span className="vt-badge">{test.isPublic ? 'Опубликован' : 'Черновик'}</span>
-                      </div>
-                      <TestListProgressMeta
-                        className="full-list__meta"
-                        stats={stats}
-                        suffix={<> · обновлён {new Date(test.updatedAt).toLocaleDateString()}</>}
-                      />
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.5rem' }}>
-                        <Link to={`/tests/${test.id}/play`} className="full-button">
-                          Пройти
-                        </Link>
-                        <Link to={`/editor/${test.id}`} className="full-button full-button--ghost">
-                          Редактировать
-                        </Link>
-                        <button
-                          type="button"
-                          className="full-button full-button--ghost"
-                          disabled={actionId === test.id || test.isPublic}
-                          onClick={() => runAction(test.id, () => testsApi.publish(test.id))}
-                        >
-                          Опубликовать
-                        </button>
-                        <button
-                          type="button"
-                          className="full-button full-button--ghost"
-                          disabled={actionId === test.id || !test.isPublic}
-                          onClick={() => runAction(test.id, () => testsApi.unpublish(test.id))}
-                        >
-                          Скрыть
-                        </button>
-                        <button
-                          type="button"
-                          className="full-button full-button--ghost"
-                          disabled={actionId === test.id}
-                          onClick={() => void handleDownloadCloudJson(test.id)}
-                        >
-                          Скачать JSON
-                        </button>
-                        <button
-                          type="button"
-                          className="full-button full-button--ghost"
-                          disabled={actionId === test.id}
-                          onClick={() => void handleSaveCloudLocally(test.id)}
-                        >
-                          Сохранить локально
-                        </button>
-                        <button
-                          type="button"
-                          className="full-button full-button--danger"
-                          disabled={actionId === test.id}
-                          onClick={() => {
-                            if (window.confirm(`Удалить тест «${test.name}»?`)) {
-                              void runAction(test.id, () => testsApi.delete(test.id));
-                            }
-                          }}
-                        >
-                          Удалить
-                        </button>
-                      </div>
-                    </li>
+                      }
+                      meta={
+                        <TestListProgressMeta
+                          className="full-list__meta"
+                          stats={stats}
+                          suffix={<> · обновлён {new Date(test.updatedAt).toLocaleDateString()}</>}
+                        />
+                      }
+                      actions={
+                        <>
+                          <Link to={`/tests/${test.id}/play`} className="full-button">
+                            Пройти
+                          </Link>
+                          <Link to={`/editor/${test.id}`} className="full-button full-button--ghost">
+                            Редактировать
+                          </Link>
+                          <button
+                            type="button"
+                            className="full-button full-button--ghost"
+                            disabled={actionId === test.id || test.isPublic}
+                            onClick={() => runAction(test.id, () => testsApi.publish(test.id))}
+                          >
+                            Опубликовать
+                          </button>
+                          <button
+                            type="button"
+                            className="full-button full-button--ghost"
+                            disabled={actionId === test.id || !test.isPublic}
+                            onClick={() => runAction(test.id, () => testsApi.unpublish(test.id))}
+                          >
+                            Скрыть
+                          </button>
+                          <button
+                            type="button"
+                            className="full-button full-button--ghost"
+                            disabled={actionId === test.id}
+                            onClick={() => void handleDownloadCloudJson(test.id)}
+                          >
+                            Скачать JSON
+                          </button>
+                          <button
+                            type="button"
+                            className="full-button full-button--ghost"
+                            disabled={actionId === test.id}
+                            onClick={() => void handleSaveCloudLocally(test.id)}
+                          >
+                            Сохранить локально
+                          </button>
+                          <button
+                            type="button"
+                            className="full-button full-button--danger"
+                            disabled={actionId === test.id}
+                            onClick={() => {
+                              if (window.confirm(`Удалить тест «${test.name}»?`)) {
+                                void runAction(test.id, () => testsApi.delete(test.id));
+                              }
+                            }}
+                          >
+                            Удалить
+                          </button>
+                        </>
+                      }
+                    />
                   );
                 })}
               </ul>

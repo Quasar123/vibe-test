@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Pagination } from '@/components/common/Pagination';
 import { TestListProgressMeta } from '@/components/tests/TestListProgressMeta';
-import { TestDifficultyBadge } from '@/components/tests/TestDifficultyBadge';
+import { TestListItemCard } from '@/components/tests/TestListItemCard';
 import { TestListToolbar } from '@/components/tests/TestListToolbar';
 import { testsApi } from '@/full/api';
 import { getApiErrorMessage, useAuth } from '@/full/context/AuthContext';
@@ -111,36 +111,31 @@ export function PublicTestsPage() {
           const stats = statsForTest(test);
 
           return (
-            <li key={test.id} className="full-list__item">
-              <div className="full-list__title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                {test.name}
-                <TestDifficultyBadge difficulty={test.difficulty} />
-              </div>
-              {test.description && 
-              <details className="full-list__details">
-                <summary className="full-list__details-summary">Описание</summary>
-                <div className="full-list__details-body">
-                  <p className="full-muted">{test.description}</p>
-                </div>
-              </details>
+            <TestListItemCard
+              key={test.id}
+              listClassName="full-list"
+              title={test.name}
+              difficulty={test.difficulty}
+              description={test.description}
+              meta={
+                <TestListProgressMeta
+                  className="full-list__meta"
+                  stats={stats}
+                  suffix={
+                    <>
+                      {' '}
+                      · {test.authorName} · обновлён{' '}
+                      {new Date(test.updatedAt).toLocaleDateString()}
+                    </>
+                  }
+                />
               }
-              <TestListProgressMeta
-                className="full-list__meta"
-                stats={stats}
-                suffix={
-                  <>
-                    {' '}
-                    · {test.authorName} · обновлён{' '}
-                    {new Date(test.updatedAt).toLocaleDateString()}
-                  </>
-                }
-              />
-              <p>
+              actions={
                 <Link to={`/tests/${test.id}/play`} className="full-button">
                   Пройти тест
                 </Link>
-              </p>
-            </li>
+              }
+            />
           );
         })}
       </ul>
