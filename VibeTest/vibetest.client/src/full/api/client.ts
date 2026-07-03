@@ -31,8 +31,6 @@ export function configureApiClient(handlers: {
   state.logoutHandler = handlers.onLogout;
 }
 
-const inFlightGets = new Map<string, Promise<unknown>>();
-
 async function request<T>(
   method: HttpMethod,
   path: string,
@@ -81,22 +79,9 @@ async function request<T>(
   return JSON.parse(responseText) as T;
 }
 
-function getDeduped<T>(path: string, options?: { skipAuthRetry?: boolean }): Promise<T> {
-  const existing = inFlightGets.get(path);
-  if (existing) {
-    return existing as Promise<T>;
-  }
-
-  const promise = request<T>('GET', path, undefined, options).finally(() => {
-    inFlightGets.delete(path);
-  });
-  inFlightGets.set(path, promise);
-  return promise;
-}
-
 export const apiClient = {
   get: <T>(path: string, options?: { skipAuthRetry?: boolean }) =>
-    getDeduped<T>(path, options),
+    request<T>('GET', path, undefined, options),
   post: <T>(path: string, body?: unknown, options?: { skipAuthRetry?: boolean }) =>
     request<T>('POST', path, body, options),
   put: <T>(path: string, body?: unknown, options?: { skipAuthRetry?: boolean }) =>
