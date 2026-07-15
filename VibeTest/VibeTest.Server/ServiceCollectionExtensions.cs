@@ -17,8 +17,16 @@ public static class ServiceCollectionExtensions
     {
         services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
 
-        services.AddDbContext<AppDbContext>(options =>
-            options.UseSqlite(configuration.GetConnectionString("DefaultConnection") ?? "Data Source=vibetest.db"));
+        services.AddDbContext<AppDbContext>((sp, options) =>
+        {
+            options.UseSqlite(configuration.GetConnectionString("DefaultConnection") ?? "Data Source=vibetest.db");
+
+            if (sp.GetRequiredService<IHostEnvironment>().IsDevelopment())
+            {
+                options.EnableSensitiveDataLogging();
+                options.EnableDetailedErrors();
+            }
+        });
 
         services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 

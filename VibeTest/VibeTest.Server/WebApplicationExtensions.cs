@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
+using Serilog.Context;
 using VibeTest.Server.Configuration;
 using VibeTest.Server.Data;
 using VibeTest.Server.Middleware;
@@ -21,10 +22,19 @@ public static class WebApplicationExtensions
                 db.Database.Migrate();
         }
 
+        app.Use(async (context, next) =>
+        {
+            using (LogContext.PushProperty("RequestId", context.TraceIdentifier))
+            {
+                await next(context);
+            }
+        });
+
         app.UseSerilogRequestLogging(options =>
         {
             options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
             {
+                diagnosticContext.Set("RequestId", httpContext.TraceIdentifier);
                 diagnosticContext.Set("RequestHost", httpContext.Request.Host.Value);
                 diagnosticContext.Set("RequestScheme", httpContext.Request.Scheme);
                 diagnosticContext.Set("RemoteIp", httpContext.Connection.RemoteIpAddress?.ToString());

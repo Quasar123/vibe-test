@@ -7,10 +7,55 @@ try
 {
     var builder = WebApplication.CreateBuilder(args);
 
-    builder.Host.UseSerilog((context, services, configuration) => configuration
-        .ReadFrom.Configuration(context.Configuration)
-        .ReadFrom.Services(services)
-        .Enrich.FromLogContext());
+    builder.Host.UseSerilog((context, services, configuration) =>
+    {
+        var logsDir = Path.Combine(
+            context.HostingEnvironment.ContentRootPath,
+            context.Configuration["LogOutput:Directory"] ?? "logs");
+        var destination = context.Configuration["LogOutput:Destination"] ?? "File";
+
+        configuration
+            .ReadFrom.Configuration(context.Configuration)
+            .ReadFrom.Services(services)
+            .Enrich.FromLogContext()
+            .WriteTo.Console();
+
+        switch (destination.Trim().ToLowerInvariant())
+        {
+            case "file":
+                Directory.CreateDirectory(logsDir);
+                configuration.WriteTo.File(
+                    Path.Combine(logsDir, context.Configuration["LogOutput:FilePath"] ?? "vibetest-.log"),
+                    rollingInterval: RollingInterval.Day,
+                    retainedFileCountLimit: 14,
+                    shared: true);
+                break;
+            case "sqlite":
+                Directory.CreateDirectory(logsDir);
+                configuration.WriteTo.SQLite(
+                    sqliteDbPath: Path.Combine(logsDir, context.Configuration["LogOutput:SqlitePath"] ?? "vibetest-logs.db"),
+                    tableName: context.Configuration["LogOutput:SqliteTableName"] ?? "Logs",
+                    storeTimestampInUtc: true);
+                break;
+            case "both":
+                Directory.CreateDirectory(logsDir);
+                configuration.WriteTo.File(
+                    Path.Combine(logsDir, context.Configuration["LogOutput:FilePath"] ?? "vibetest-.log"),
+                    rollingInterval: RollingInterval.Day,
+                    retainedFileCountLimit: 14,
+                    shared: true);
+                configuration.WriteTo.SQLite(
+                    sqliteDbPath: Path.Combine(logsDir, context.Configuration["LogOutput:SqlitePath"] ?? "vibetest-logs.db"),
+                    tableName: context.Configuration["LogOutput:SqliteTableName"] ?? "Logs",
+                    storeTimestampInUtc: true);
+                break;
+            case "none":
+                break;
+            default:
+                throw new InvalidOperationException(
+                    $"Unsupported LogOutput:Destination '{destination}'. Use File, SQLite, Both, or None.");
+        }
+    });
 
     builder.Services.AddControllers()
         .AddJsonOptions(options =>
