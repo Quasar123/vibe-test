@@ -15,9 +15,9 @@ export function normalizeDifficulty(value: unknown): TestDifficulty {
   return 'easy';
 }
 
-export function parseDifficulty(value: unknown): TestDifficulty | undefined {
+export function parseDifficulty(value: unknown): TestDifficulty {
   if (value === 'easy' || value === 'medium' || value === 'hard') {
     return value;
   }
-  return undefined;
+  return 'easy';
 }
