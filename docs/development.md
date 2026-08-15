@@ -145,22 +145,13 @@ JWT-токены в full-режиме хранятся отдельно в `Auth
 Логи всегда пишутся в консоль. Persistent sink выбирается через `LogOutput:Destination`:
 
 - `File` — файл `VibeTest.Server/logs/vibetest-<дата>.log` (rolling, 14 дней)
-- `SQLite` — база `VibeTest.Server/logs/vibetest-logs.db`, таблица `Logs`
-- `Both` — одновременно файл и SQLite
 - `None` — только консоль
 
-По умолчанию используется `File`; в `Development` — `SQLite`; в `Testing` и `E2E` — `None`. Для локального переключения поменяйте `LogOutput:Destination` в `appsettings.Development.json` или задайте переменную окружения `LogOutput__Destination`.
+По умолчанию используется `File`; в `Testing` и `E2E` — `None`. Для локального переключения поменяйте `LogOutput:Destination` в `appsettings.Development.json` или задайте переменную окружения `LogOutput__Destination`.
 
 В `Development` дополнительно логируются SQL-запросы EF Core (категория `Microsoft.EntityFrameworkCore.Database.Command`) с текстом запроса и значениями параметров. В production и тестовых средах SQL не логируется.
 
-Все логи внутри одного HTTP-запроса связаны общим `RequestId` (`HttpContext.TraceIdentifier`): HTTP completion log, сервисные логи и SQL-запросы EF Core получают одинаковый ключ. Для поиска в SQLite:
-
-```sql
-SELECT Timestamp, Level, Message, Properties
-FROM Logs
-WHERE Properties LIKE '%<RequestId>%'
-ORDER BY Timestamp;
-```
+Все логи внутри одного HTTP-запроса связаны общим `RequestId` (`HttpContext.TraceIdentifier`): HTTP completion log, сервисные логи и SQL-запросы EF Core получают одинаковый ключ.
 
 ## Структура фронтенда (кратко)
 
