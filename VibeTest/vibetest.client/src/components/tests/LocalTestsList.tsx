@@ -105,7 +105,7 @@ export function LocalTestsList({
               key={test.id}
               listClassName={listClassName}
               title={test.name}
-              difficulty={test.difficulty}
+              difficulty={test.difficulty ?? 'easy'}
               description={test.description}
               meta={
                 <TestListProgressMeta
