@@ -13,7 +13,7 @@ public class Test
     public DateTime UpdatedAt { get; set; }
 
     public User Author { get; set; } = null!;
-    public ICollection<TestQuestionAnswer> QuestionAnswers { get; set; } = [];
+    public ICollection<Question> Questions { get; set; } = [];
     public ICollection<Result> Results { get; set; } = [];
     public ICollection<UserTestResult> UserTestResults { get; set; } = [];
 }

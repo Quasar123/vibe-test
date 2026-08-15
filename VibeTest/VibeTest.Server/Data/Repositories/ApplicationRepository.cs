@@ -30,10 +30,7 @@ public class ApplicationRepository(AppDbContext db) : IApplicationRepository
             FROM TestApplications ta
             INNER JOIN Tests t ON t.Id = ta.TestId
             LEFT JOIN ApplicationResults ar ON ar.ApplicationId = ta.Id
-            LEFT JOIN TestQuestionAnswers sel
-                ON sel.TestId = ta.TestId
-               AND sel.QuestionId = ar.QuestionId
-               AND sel.AnswerId = ar.AnswerId
+            LEFT JOIN Answers sel ON sel.Id = ar.AnswerId
             WHERE ta.AuthorId = {0}
             GROUP BY ta.Id, ta.Token, ta.Title, ta.Type, ta.TestId, t.Name, ta.CreatedAt, ta.CompletedAt, ta.HideResultsFromParticipant, ta.RecipientUserId, t.QuestionsCount
         )
@@ -50,11 +47,8 @@ public class ApplicationRepository(AppDbContext db) : IApplicationRepository
             .Include(a => a.Test)
             .ThenInclude(t => t.Author)
             .Include(a => a.Test)
-            .ThenInclude(t => t.QuestionAnswers)
-            .ThenInclude(tqa => tqa.Question)
-            .Include(a => a.Test)
-            .ThenInclude(t => t.QuestionAnswers)
-            .ThenInclude(tqa => tqa.Answer)
+            .ThenInclude(t => t.Questions)
+            .ThenInclude(q => q.Answers)
             .FirstOrDefaultAsync(a => a.Token == token, cancellationToken);
 
     public Task<TestApplication?> GetByTokenForAccessAsync(Guid token, CancellationToken cancellationToken = default) =>
@@ -201,27 +195,24 @@ public class ApplicationRepository(AppDbContext db) : IApplicationRepository
             .SqlQueryRaw<AnsweredQuestionRow>(
                 """
                 SELECT
-                    sel.QuestionOrder AS QuestionOrder,
-                    sel.AnswerOrder AS SelectedAnswerOrder,
-                    correct.AnswerOrder AS CorrectAnswerOrder,
+                    q."Order" AS QuestionOrder,
+                    sel."Order" AS SelectedAnswerOrder,
+                    correct."Order" AS CorrectAnswerOrder,
                     sel.IsCorrect AS IsCorrect,
-                    expl.Explanation AS Explanation
+                    q.Explanation AS Explanation
                 FROM ApplicationResults ar
                 INNER JOIN TestApplications ta ON ta.Id = ar.ApplicationId
-                INNER JOIN TestQuestionAnswers sel
-                    ON sel.TestId = ta.TestId
+                INNER JOIN Questions q
+                    ON q.Id = ar.QuestionId
+                   AND q.TestId = ta.TestId
+                INNER JOIN Answers sel
+                    ON sel.Id = ar.AnswerId
                    AND sel.QuestionId = ar.QuestionId
-                   AND sel.AnswerId = ar.AnswerId
-                INNER JOIN TestQuestionAnswers correct
-                    ON correct.TestId = ta.TestId
-                   AND correct.QuestionOrder = sel.QuestionOrder
+                INNER JOIN Answers correct
+                    ON correct.QuestionId = q.Id
                    AND correct.IsCorrect = 1
-                LEFT JOIN TestQuestionAnswers expl
-                    ON expl.TestId = ta.TestId
-                   AND expl.QuestionOrder = sel.QuestionOrder
-                   AND expl.AnswerOrder = 0
                 WHERE ar.ApplicationId = {0}
-                ORDER BY sel.QuestionOrder
+                ORDER BY q."Order"
                 """,
                 applicationId)
             .ToListAsync(cancellationToken);
@@ -243,10 +234,7 @@ public class ApplicationRepository(AppDbContext db) : IApplicationRepository
                 FROM TestApplications ta
                 INNER JOIN Tests t ON t.Id = ta.TestId
                 LEFT JOIN ApplicationResults ar ON ar.ApplicationId = ta.Id
-                LEFT JOIN TestQuestionAnswers sel
-                    ON sel.TestId = ta.TestId
-                   AND sel.QuestionId = ar.QuestionId
-                   AND sel.AnswerId = ar.AnswerId
+                LEFT JOIN Answers sel ON sel.Id = ar.AnswerId
                 WHERE ta.Id = {0}
                 GROUP BY t.Id, t.Name, t.QuestionsCount, ta.CompletedAt
                 """,

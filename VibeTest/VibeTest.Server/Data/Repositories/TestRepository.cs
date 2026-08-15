@@ -12,10 +12,8 @@ public class TestRepository(AppDbContext db) : ITestRepository
     public Task<Test?> GetByIdWithStructureAsync(int testId, CancellationToken cancellationToken = default) =>
         db.Tests
             .Include(t => t.Author)
-            .Include(t => t.QuestionAnswers)
-                .ThenInclude(tqa => tqa.Question)
-            .Include(t => t.QuestionAnswers)
-                .ThenInclude(tqa => tqa.Answer)
+            .Include(t => t.Questions)
+                .ThenInclude(q => q.Answers)
             .FirstOrDefaultAsync(t => t.Id == testId, cancellationToken);
 
     public async Task AddAsync(Test test, CancellationToken cancellationToken = default) =>
@@ -31,7 +29,11 @@ public class TestRepository(AppDbContext db) : ITestRepository
     {
         var row = await db.Database
             .SqlQueryRaw<ScalarIntRow>(
-                "SELECT COALESCE(MAX(QuestionOrder), -1) AS Value FROM TestQuestionAnswers WHERE TestId = {0}",
+                """
+                SELECT COALESCE(MAX("Order"), -1) AS Value
+                FROM Questions
+                WHERE TestId = {0}
+                """,
                 testId)
             .FirstAsync(cancellationToken);
 

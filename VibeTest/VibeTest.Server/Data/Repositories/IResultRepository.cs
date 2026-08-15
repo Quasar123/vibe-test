@@ -6,7 +6,7 @@ namespace VibeTest.Server.Data.Repositories;
 public interface IResultRepository
 {
     Task<List<Result>> GetByUserAndTestAsync(int userId, int testId, CancellationToken cancellationToken = default);
-    Task<TestQuestionAnswer?> GetTqaByOrdersAsync(int testId, int questionOrder, int answerOrder, CancellationToken cancellationToken = default);
+    Task<Answer?> GetAnswerByOrdersAsync(int testId, int questionOrder, int answerOrder, CancellationToken cancellationToken = default);
     Task<int?> GetCorrectAnswerOrderAsync(int testId, int questionOrder, CancellationToken cancellationToken = default);
     Task<string?> GetQuestionExplanationAsync(int testId, int questionOrder, CancellationToken cancellationToken = default);
     Task<TestResultSummaryRow?> GetTestResultSummaryAsync(int userId, int testId, CancellationToken cancellationToken = default);

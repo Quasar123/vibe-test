@@ -13,6 +13,7 @@ VibeTest — конструктор и прохождение тестов в б
 | [development.md](development.md) | Разработчики | Тесты, миграции, seed-данные, npm-скрипты |
 | [api-reference.md](api-reference.md) | Backend / full | Краткий справочник REST API |
 | [spec.md](spec.md) | Архитекторы | Глубокая техспецификация: БД, домен, DTO |
+| [known-issues.md](known-issues.md) | Разработчики | Известные проблемы, риски и технический долг |
 
 ## Быстрые ссылки
 

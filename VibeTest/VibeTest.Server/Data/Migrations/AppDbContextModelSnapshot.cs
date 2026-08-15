@@ -23,13 +23,22 @@ namespace VibeTest.Server.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("IsCorrect")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("QuestionId")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("Text")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Text")
+                    b.HasIndex("QuestionId", "Order")
                         .IsUnique();
 
                     b.ToTable("Answers");
@@ -71,13 +80,22 @@ namespace VibeTest.Server.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("Explanation")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TestId")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("Text")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Text")
+                    b.HasIndex("TestId", "Order")
                         .IsUnique();
 
                     b.ToTable("Questions");
@@ -239,45 +257,6 @@ namespace VibeTest.Server.Data.Migrations
                     b.ToTable("TestApplications");
                 });
 
-            modelBuilder.Entity("VibeTest.Server.Models.Entities.TestQuestionAnswer", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("AnswerId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("AnswerOrder")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Explanation")
-                        .HasColumnType("TEXT");
-
-                    b.Property<bool>("IsCorrect")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("QuestionId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("QuestionOrder")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("TestId")
-                        .HasColumnType("INTEGER");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("AnswerId");
-
-                    b.HasIndex("QuestionId");
-
-                    b.HasIndex("TestId", "QuestionOrder", "AnswerOrder")
-                        .IsUnique();
-
-                    b.ToTable("TestQuestionAnswers");
-                });
-
             modelBuilder.Entity("VibeTest.Server.Models.Entities.User", b =>
                 {
                     b.Property<int>("Id")
@@ -335,6 +314,17 @@ namespace VibeTest.Server.Data.Migrations
                     b.ToTable("UserTestResults");
                 });
 
+            modelBuilder.Entity("VibeTest.Server.Models.Entities.Answer", b =>
+                {
+                    b.HasOne("VibeTest.Server.Models.Entities.Question", "Question")
+                        .WithMany("Answers")
+                        .HasForeignKey("QuestionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Question");
+                });
+
             modelBuilder.Entity("VibeTest.Server.Models.Entities.ApplicationResult", b =>
                 {
                     b.HasOne("VibeTest.Server.Models.Entities.Answer", "Answer")
@@ -360,6 +350,17 @@ namespace VibeTest.Server.Data.Migrations
                     b.Navigation("Application");
 
                     b.Navigation("Question");
+                });
+
+            modelBuilder.Entity("VibeTest.Server.Models.Entities.Question", b =>
+                {
+                    b.HasOne("VibeTest.Server.Models.Entities.Test", "Test")
+                        .WithMany("Questions")
+                        .HasForeignKey("TestId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Test");
                 });
 
             modelBuilder.Entity("VibeTest.Server.Models.Entities.RefreshToken", b =>
@@ -445,33 +446,6 @@ namespace VibeTest.Server.Data.Migrations
                     b.Navigation("Test");
                 });
 
-            modelBuilder.Entity("VibeTest.Server.Models.Entities.TestQuestionAnswer", b =>
-                {
-                    b.HasOne("VibeTest.Server.Models.Entities.Answer", "Answer")
-                        .WithMany("TestQuestionAnswers")
-                        .HasForeignKey("AnswerId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("VibeTest.Server.Models.Entities.Question", "Question")
-                        .WithMany("TestQuestionAnswers")
-                        .HasForeignKey("QuestionId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("VibeTest.Server.Models.Entities.Test", "Test")
-                        .WithMany("QuestionAnswers")
-                        .HasForeignKey("TestId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Answer");
-
-                    b.Navigation("Question");
-
-                    b.Navigation("Test");
-                });
-
             modelBuilder.Entity("VibeTest.Server.Models.Entities.UserTestResult", b =>
                 {
                     b.HasOne("VibeTest.Server.Models.Entities.Test", "Test")
@@ -494,20 +468,18 @@ namespace VibeTest.Server.Data.Migrations
             modelBuilder.Entity("VibeTest.Server.Models.Entities.Answer", b =>
                 {
                     b.Navigation("Results");
-
-                    b.Navigation("TestQuestionAnswers");
                 });
 
             modelBuilder.Entity("VibeTest.Server.Models.Entities.Question", b =>
                 {
-                    b.Navigation("Results");
+                    b.Navigation("Answers");
 
-                    b.Navigation("TestQuestionAnswers");
+                    b.Navigation("Results");
                 });
 
             modelBuilder.Entity("VibeTest.Server.Models.Entities.Test", b =>
                 {
-                    b.Navigation("QuestionAnswers");
+                    b.Navigation("Questions");
 
                     b.Navigation("Results");
 

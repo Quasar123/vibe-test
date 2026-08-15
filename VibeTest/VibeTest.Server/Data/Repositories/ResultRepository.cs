@@ -32,16 +32,17 @@ public class ResultRepository(AppDbContext db) : IResultRepository
             .Where(r => r.UserId == userId && r.TestId == testId)
             .ToListAsync(cancellationToken);
 
-    public Task<TestQuestionAnswer?> GetTqaByOrdersAsync(
+    public Task<Answer?> GetAnswerByOrdersAsync(
         int testId,
         int questionOrder,
         int answerOrder,
         CancellationToken cancellationToken = default) =>
-        db.TestQuestionAnswers
+        db.Answers
+            .Include(a => a.Question)
             .FirstOrDefaultAsync(
-                tqa => tqa.TestId == testId
-                    && tqa.QuestionOrder == questionOrder
-                    && tqa.AnswerOrder == answerOrder,
+                a => a.Question.TestId == testId
+                    && a.Question.Order == questionOrder
+                    && a.Order == answerOrder,
                 cancellationToken);
 
     public async Task<int?> GetCorrectAnswerOrderAsync(int testId, int questionOrder, CancellationToken cancellationToken = default)
@@ -49,11 +50,12 @@ public class ResultRepository(AppDbContext db) : IResultRepository
         var row = await db.Database
             .SqlQueryRaw<ScalarIntRow>(
                 """
-                SELECT AnswerOrder AS Value
-                FROM TestQuestionAnswers
-                WHERE TestId = {0}
-                  AND QuestionOrder = {1}
-                  AND IsCorrect = 1
+                SELECT a."Order" AS Value
+                FROM Answers a
+                INNER JOIN Questions q ON q.Id = a.QuestionId
+                WHERE q.TestId = {0}
+                  AND q."Order" = {1}
+                  AND a.IsCorrect = 1
                 LIMIT 1
                 """,
                 testId,
@@ -68,11 +70,9 @@ public class ResultRepository(AppDbContext db) : IResultRepository
         int questionOrder,
         CancellationToken cancellationToken = default)
     {
-        var row = await db.TestQuestionAnswers
-            .Where(tqa => tqa.TestId == testId
-                && tqa.QuestionOrder == questionOrder
-                && tqa.AnswerOrder == 0)
-            .Select(tqa => tqa.Explanation)
+        var row = await db.Questions
+            .Where(q => q.TestId == testId && q.Order == questionOrder)
+            .Select(q => q.Explanation)
             .FirstOrDefaultAsync(cancellationToken);
 
         return string.IsNullOrWhiteSpace(row) ? null : row;
@@ -153,26 +153,23 @@ public class ResultRepository(AppDbContext db) : IResultRepository
             .SqlQueryRaw<AnsweredQuestionRow>(
                 """
                 SELECT
-                    sel.QuestionOrder AS QuestionOrder,
-                    sel.AnswerOrder AS SelectedAnswerOrder,
-                    correct.AnswerOrder AS CorrectAnswerOrder,
+                    q."Order" AS QuestionOrder,
+                    sel."Order" AS SelectedAnswerOrder,
+                    correct."Order" AS CorrectAnswerOrder,
                     sel.IsCorrect AS IsCorrect,
-                    expl.Explanation AS Explanation
+                    q.Explanation AS Explanation
                 FROM Results r
-                INNER JOIN TestQuestionAnswers sel
-                    ON sel.TestId = r.TestId
+                INNER JOIN Questions q
+                    ON q.Id = r.QuestionId
+                   AND q.TestId = r.TestId
+                INNER JOIN Answers sel
+                    ON sel.Id = r.AnswerId
                    AND sel.QuestionId = r.QuestionId
-                   AND sel.AnswerId = r.AnswerId
-                INNER JOIN TestQuestionAnswers correct
-                    ON correct.TestId = r.TestId
-                   AND correct.QuestionOrder = sel.QuestionOrder
+                INNER JOIN Answers correct
+                    ON correct.QuestionId = q.Id
                    AND correct.IsCorrect = 1
-                LEFT JOIN TestQuestionAnswers expl
-                    ON expl.TestId = r.TestId
-                   AND expl.QuestionOrder = sel.QuestionOrder
-                   AND expl.AnswerOrder = 0
                 WHERE r.UserId = {0} AND r.TestId = {1}
-                ORDER BY sel.QuestionOrder
+                ORDER BY q."Order"
                 """,
                 userId,
                 testId)

@@ -202,7 +202,7 @@ public class ApplicationService(
 
         var testId = application.TestId;
 
-        var selected = await results.GetTqaByOrdersAsync(testId, request.QuestionOrder, request.SelectedAnswerOrder)
+        var selected = await results.GetAnswerByOrdersAsync(testId, request.QuestionOrder, request.SelectedAnswerOrder)
             ?? throw new ValidationException("Неверный вопрос или ответ");
 
         var correctOrder = await results.GetCorrectAnswerOrderAsync(testId, request.QuestionOrder)
@@ -213,7 +213,7 @@ public class ApplicationService(
             application.Id,
             testId,
             selected.QuestionId,
-            selected.AnswerId,
+            selected.Id,
             now);
         switch (status)
         {
@@ -292,7 +292,7 @@ public class ApplicationService(
         Name = test.Name,
         Description = test.Description,
         AuthorName = test.Author.DisplayName,
-        Questions = TqaGrouper.ToDetailQuestions(test.QuestionAnswers)
+        Questions = QuestionMapper.ToDetailQuestions(test.Questions)
     };
 
     private static string BuildPlayUrl(Guid token) => $"/application/{token}";

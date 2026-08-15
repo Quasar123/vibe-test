@@ -6,7 +6,7 @@ namespace VibeTest.Tests.Integration;
 public class TestServiceTests
 {
     [Fact]
-    public async Task CreateTest_deduplicates_shared_question_text()
+    public async Task CreateTest_allows_duplicate_question_text_across_tests()
     {
         using var fx = new ServiceFixture();
         var author = await fx.SeedUserAsync();
@@ -28,7 +28,7 @@ public class TestServiceTests
         });
 
         Assert.NotEqual(first.Id, second.Id);
-        Assert.Equal(1, fx.Db.Questions.Count(q => q.Text == "What is SQL?"));
+        Assert.Equal(2, fx.Db.Questions.Count(q => q.Text == "What is SQL?"));
         Assert.Equal(1, fx.Db.Questions.Count(q => q.Text == "SELECT is?"));
     }
 
@@ -59,7 +59,7 @@ public class TestServiceTests
     }
 
     [Fact]
-    public async Task CreateTest_deduplicates_shared_answer_text_within_single_test()
+    public async Task CreateTest_creates_separate_answer_rows_for_shared_text_within_single_test()
     {
         using var fx = new ServiceFixture();
         var author = await fx.SeedUserAsync();
@@ -91,7 +91,38 @@ public class TestServiceTests
         });
 
         Assert.Equal(3, created.QuestionsCount);
-        Assert.Equal(1, fx.Db.Answers.Count(a => a.Text == "int"));
+        Assert.Equal(3, fx.Db.Answers.Count(a => a.Text == "int"));
+    }
+
+    [Fact]
+    public async Task CreateTest_allows_duplicate_question_text_within_single_test()
+    {
+        using var fx = new ServiceFixture();
+        var author = await fx.SeedUserAsync();
+
+        var created = await fx.TestService.CreateTest(author.Id, new CreateTestRequest
+        {
+            Name = "Repeated text",
+            Questions =
+            [
+                new QuestionInput
+                {
+                    Text = "Same text",
+                    Answers = ["A", "B"],
+                    Correct = 0
+                },
+                new QuestionInput
+                {
+                    Text = "Same text",
+                    Answers = ["C", "D"],
+                    Correct = 1
+                }
+            ]
+        });
+
+        var full = await fx.TestService.GetTestFull(created.Id, author.Id);
+        Assert.Equal(2, full.Questions.Count);
+        Assert.Equal(2, fx.Db.Questions.Count(q => q.TestId == created.Id && q.Text == "Same text"));
     }
 
     [Fact]
@@ -251,5 +282,21 @@ public class TestServiceTests
         var created = await fx.TestService.CreateTest(author.Id, ServiceFixture.SampleTestRequest());
 
         await Assert.ThrowsAsync<NotFoundException>(() => fx.TestService.GetPublicPlayTest(created.Id));
+    }
+
+    [Fact]
+    public async Task DeleteTest_cascades_questions_and_answers()
+    {
+        using var fx = new ServiceFixture();
+        var author = await fx.SeedUserAsync();
+        var created = await fx.TestService.CreateTest(author.Id, ServiceFixture.SampleTestRequest());
+
+        var questionIds = fx.Db.Questions.Where(q => q.TestId == created.Id).Select(q => q.Id).ToList();
+        Assert.NotEmpty(questionIds);
+
+        await fx.TestService.DeleteTest(created.Id, author.Id);
+
+        Assert.Empty(fx.Db.Questions.Where(q => q.TestId == created.Id));
+        Assert.Empty(fx.Db.Answers.Where(a => questionIds.Contains(a.QuestionId)));
     }
 }

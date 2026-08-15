@@ -9,7 +9,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Test> Tests => Set<Test>();
     public DbSet<Question> Questions => Set<Question>();
     public DbSet<Answer> Answers => Set<Answer>();
-    public DbSet<TestQuestionAnswer> TestQuestionAnswers => Set<TestQuestionAnswer>();
     public DbSet<Result> Results => Set<Result>();
     public DbSet<UserTestResult> UserTestResults => Set<UserTestResult>();
     public DbSet<TestApplication> TestApplications => Set<TestApplication>();
@@ -36,32 +35,22 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         modelBuilder.Entity<Question>(entity =>
         {
-            entity.HasIndex(q => q.Text).IsUnique();
+            entity.HasIndex(q => new { q.TestId, q.Order }).IsUnique();
+
+            entity.HasOne(q => q.Test)
+                .WithMany(t => t.Questions)
+                .HasForeignKey(q => q.TestId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<Answer>(entity =>
         {
-            entity.HasIndex(a => a.Text).IsUnique();
-        });
+            entity.HasIndex(a => new { a.QuestionId, a.Order }).IsUnique();
 
-        modelBuilder.Entity<TestQuestionAnswer>(entity =>
-        {
-            entity.HasIndex(tqa => new { tqa.TestId, tqa.QuestionOrder, tqa.AnswerOrder }).IsUnique();
-
-            entity.HasOne(tqa => tqa.Test)
-                .WithMany(t => t.QuestionAnswers)
-                .HasForeignKey(tqa => tqa.TestId)
+            entity.HasOne(a => a.Question)
+                .WithMany(q => q.Answers)
+                .HasForeignKey(a => a.QuestionId)
                 .OnDelete(DeleteBehavior.Cascade);
-
-            entity.HasOne(tqa => tqa.Question)
-                .WithMany(q => q.TestQuestionAnswers)
-                .HasForeignKey(tqa => tqa.QuestionId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            entity.HasOne(tqa => tqa.Answer)
-                .WithMany(a => a.TestQuestionAnswers)
-                .HasForeignKey(tqa => tqa.AnswerId)
-                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<UserTestResult>(entity =>
