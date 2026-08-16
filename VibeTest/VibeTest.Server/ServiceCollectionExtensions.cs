@@ -19,7 +19,10 @@ public static class ServiceCollectionExtensions
 
         services.AddDbContext<AppDbContext>((sp, options) =>
         {
-            options.UseSqlite(configuration.GetConnectionString("DefaultConnection") ?? "Data Source=vibetest.db");
+            var connectionString = configuration.GetConnectionString("DefaultConnection")
+                ?? throw new InvalidOperationException("ConnectionStrings:DefaultConnection is not configured.");
+
+            options.UseVibeTestPostgreSql(connectionString);
 
             if (sp.GetRequiredService<IHostEnvironment>().IsDevelopment())
             {

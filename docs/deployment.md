@@ -72,14 +72,14 @@ VITE_BASE_PATH=/vibe-test/
 3. Задать `VITE_API_URL` при сборке, если API на другом origin (иначе по умолчанию `/api`).
 4. **Обязательно сменить** в production:
    - `Jwt:Key` в конфигурации (минимум 32 символа)
-   - `ConnectionStrings:DefaultConnection` — путь к SQLite или другая СУБД при миграции
+   - `ConnectionStrings:DefaultConnection` — строка подключения PostgreSQL
 
 Пример `appsettings.Production.json` (создаётся вручную на сервере):
 
 ```json
 {
   "ConnectionStrings": {
-    "DefaultConnection": "Data Source=/var/lib/vibetest/vibetest.db"
+    "DefaultConnection": "Host=postgres;Port=5432;Database=vibetest;Username=vibetest;Password=<secret>"
   },
   "Jwt": {
     "Key": "<случайная-строка-32+-символов>"
@@ -142,9 +142,41 @@ cd VibeTest
 ASPNETCORE_ENVIRONMENT=Production dotnet run --project VibeTest.Server
 ```
 
-### Docker
+### Docker Compose
 
-В репозитории **нет** Dockerfile и docker-compose — готовых контейнерных инструкций нет.
+Compose-файлы лежат в каталоге [`docker/`](../docker/):
+
+| Файл | Назначение |
+|------|------------|
+| [`docker/compose.infra.yml`](../docker/compose.infra.yml) | только PostgreSQL |
+| [`docker/compose.app.yml`](../docker/compose.app.yml) | PostgreSQL + API + nginx (full SPA) |
+
+**Только БД** (PostgreSQL проброшен на `localhost:5432` для мониторинга с хоста):
+
+```bash
+cp docker/.env.infra.example docker/.env.infra
+docker compose -f docker/compose.infra.yml --env-file docker/.env.infra up -d
+docker compose -f docker/compose.infra.yml down
+```
+
+**Полный стек** (API + фронтенд + БД):
+
+```bash
+cp docker/.env.app.example docker/.env.app
+docker compose -f docker/compose.app.yml --env-file docker/.env.app up -d --build
+# SPA: http://localhost:8080
+# PostgreSQL: localhost:5432
+```
+
+Шаблоны переменных: [`docker/.env.infra.example`](../docker/.env.infra.example), [`docker/.env.app.example`](../docker/.env.app.example). Файлы `docker/.env.*` в git не коммитятся.
+
+Локально запущенный API (без Docker) подключается к PostgreSQL через `ConnectionStrings__DefaultConnection`, например:
+
+```bash
+ConnectionStrings__DefaultConnection="Host=localhost;Port=5432;Database=vibetest;Username=vibetest;Password=changeme" dotnet run --project VibeTest.Server
+```
+
+Dockerfile: [`docker/server/Dockerfile`](../docker/server/Dockerfile), [`docker/web/Dockerfile`](../docker/web/Dockerfile).
 
 ---
 
@@ -155,7 +187,7 @@ Workflow [`.github/workflows/e2e.yml`](../.github/workflows/e2e.yml) на каж
 1. Устанавливает .NET 10 и Node.js 22
 2. `npm ci` + Playwright Chromium
 3. `npm run e2e:guest` — guest E2E
-4. `npm run e2e:full` — full E2E (API поднимается с `ASPNETCORE_ENVIRONMENT=E2E`)
+4. `npm run e2e:full` — full E2E (API с `ASPNETCORE_ENVIRONMENT=E2E`, PostgreSQL service в CI)
 
 При падении загружается артефакт `playwright-report` (хранение 7 дней).
 
@@ -178,7 +210,7 @@ npm run e2e:full
 | `VITE_BASE_PATH` | сборка SPA | базовый путь (GitHub Pages) |
 | `VITE_API_URL` | сборка full SPA | URL API (по умолчанию `/api`) |
 | `ASPNETCORE_ENVIRONMENT` | сервер | `Development`, `Production`, `E2E`, `Testing` |
-| `ConnectionStrings:DefaultConnection` | appsettings | SQLite |
+| `ConnectionStrings:DefaultConnection` | appsettings / env | PostgreSQL |
 | `Jwt:*` | appsettings | ключ, issuer, сроки токенов |
 | `Cors:AllowedOrigins` | appsettings / env | разрешённые SPA origin |
 | `RateLimit:*` | appsettings / env | лимиты запросов (см. выше) |

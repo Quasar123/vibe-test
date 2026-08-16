@@ -6,14 +6,11 @@
 # test creds
 test_creds.md
 
-# VibeTest runtime artifacts (SQLite, logs, E2E DB)
-*.db
-*.db-shm
+# VibeTest runtime artifacts (logs, local infra env)
 *.db-wal
-VibeTest/VibeTest.Server/db/
 VibeTest/VibeTest.Server/logs/
-VibeTest/VibeTest.Server/vibetest.e2e.db
-VibeTest/VibeTest.Server/vibetest.e2e.db-*
+docker/.env.infra
+docker/.env.app
 
 # Visual Studio / Rider (solution-level caches)
 **/.vs/

@@ -30,9 +30,9 @@ public class TestRepository(AppDbContext db) : ITestRepository
         var row = await db.Database
             .SqlQueryRaw<ScalarIntRow>(
                 """
-                SELECT COALESCE(MAX("Order"), -1) AS Value
-                FROM Questions
-                WHERE TestId = {0}
+                SELECT COALESCE(MAX("order"), -1) AS value
+                FROM questions
+                WHERE test_id = {0}
                 """,
                 testId)
             .FirstAsync(cancellationToken);
@@ -43,7 +43,7 @@ public class TestRepository(AppDbContext db) : ITestRepository
     public async Task<int> CountPublicTestsAsync(CancellationToken cancellationToken = default)
     {
         var row = await db.Database
-            .SqlQueryRaw<ScalarIntRow>("SELECT COUNT(*) AS Value FROM Tests WHERE IsPublic = 1")
+            .SqlQueryRaw<ScalarIntRow>("""SELECT COUNT(*) AS value FROM tests WHERE is_public = TRUE""")
             .FirstAsync(cancellationToken);
 
         return row.Value;
@@ -61,18 +61,18 @@ public class TestRepository(AppDbContext db) : ITestRepository
         var sql =
             """
             SELECT
-                t.Id AS Id,
-                t.Name AS Name,
-                t.Description AS Description,
-                u.DisplayName AS AuthorName,
-                t.QuestionsCount AS QuestionsCount,
-                t.IsPublic AS IsPublic,
-                t.Difficulty AS Difficulty,
-                t.CreatedAt AS CreatedAt,
-                t.UpdatedAt AS UpdatedAt
-            FROM Tests t
-            INNER JOIN Users u ON u.Id = t.AuthorId
-            WHERE t.IsPublic = 1
+                t.id AS id,
+                t.name AS name,
+                t.description AS description,
+                u.display_name AS author_name,
+                t.questions_count AS questions_count,
+                t.is_public AS is_public,
+                t.difficulty AS difficulty,
+                t.created_at AS created_at,
+                t.updated_at AS updated_at
+            FROM tests t
+            INNER JOIN users u ON u.id = t.author_id
+            WHERE t.is_public = TRUE
             ORDER BY 
             """ + sortColumn + " " + sortDirection + """
 
@@ -89,12 +89,12 @@ public class TestRepository(AppDbContext db) : ITestRepository
         var row = await db.Database
             .SqlQueryRaw<ScalarIntRow>(
                 """
-                SELECT COUNT(*) AS Value
-                FROM Tests t
-                WHERE t.AuthorId = {0}
+                SELECT COUNT(*) AS value
+                FROM tests t
+                WHERE t.author_id = {0}
                   AND ({1} = 'all'
-                       OR ({1} = 'published' AND t.IsPublic = 1)
-                       OR ({1} = 'private' AND t.IsPublic = 0))
+                       OR ({1} = 'published' AND t.is_public = TRUE)
+                       OR ({1} = 'private' AND t.is_public = FALSE))
                 """,
                 authorId,
                 filter)
@@ -117,21 +117,21 @@ public class TestRepository(AppDbContext db) : ITestRepository
         var sql =
             """
             SELECT
-                t.Id AS Id,
-                t.Name AS Name,
-                t.Description AS Description,
-                u.DisplayName AS AuthorName,
-                t.QuestionsCount AS QuestionsCount,
-                t.IsPublic AS IsPublic,
-                t.Difficulty AS Difficulty,
-                t.CreatedAt AS CreatedAt,
-                t.UpdatedAt AS UpdatedAt
-            FROM Tests t
-            INNER JOIN Users u ON u.Id = t.AuthorId
-            WHERE t.AuthorId = {2}
+                t.id AS id,
+                t.name AS name,
+                t.description AS description,
+                u.display_name AS author_name,
+                t.questions_count AS questions_count,
+                t.is_public AS is_public,
+                t.difficulty AS difficulty,
+                t.created_at AS created_at,
+                t.updated_at AS updated_at
+            FROM tests t
+            INNER JOIN users u ON u.id = t.author_id
+            WHERE t.author_id = {2}
               AND ({3} = 'all'
-                   OR ({3} = 'published' AND t.IsPublic = 1)
-                   OR ({3} = 'private' AND t.IsPublic = 0))
+                   OR ({3} = 'published' AND t.is_public = TRUE)
+                   OR ({3} = 'private' AND t.is_public = FALSE))
             ORDER BY 
             """ + sortColumn + " " + sortDirection + """
 
@@ -148,7 +148,7 @@ public class TestRepository(AppDbContext db) : ITestRepository
 
     private static (string Column, string Direction) ResolveTestListSort(string sortBy, string order)
     {
-        var column = sortBy == "name" ? "t.Name COLLATE NOCASE" : "t.UpdatedAt";
+        var column = sortBy == "name" ? "LOWER(t.name)" : "t.updated_at";
         var direction = order == "asc" ? "ASC" : "DESC";
         return (column, direction);
     }

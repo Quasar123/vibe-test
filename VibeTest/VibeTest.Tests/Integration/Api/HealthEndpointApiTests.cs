@@ -1,12 +1,12 @@
 using System.Net;
+using VibeTest.Tests.Integration;
 
 namespace VibeTest.Tests.Integration.Api;
 
-public class HealthEndpointApiTests : IClassFixture<ApiFixture>
+[Collection(PostgreSqlCollection.Name)]
+public class HealthEndpointApiTests(PostgreSqlTestFixture postgres)
 {
-    private readonly ApiWebApplicationFactory _factory;
-
-    public HealthEndpointApiTests(ApiFixture fixture) => _factory = fixture.Factory;
+    private readonly ApiWebApplicationFactory _factory = postgres.Factory;
 
     [Fact]
     public async Task Health_live_returns_ok()

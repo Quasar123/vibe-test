@@ -4,8 +4,8 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using VibeTest.Server.Data;
@@ -16,12 +16,13 @@ namespace VibeTest.Tests.Integration.Api;
 
 public class ApiWebApplicationFactory : WebApplicationFactory<Program>
 {
-    private readonly SqliteConnection _connection;
+    private readonly string _connectionString;
+    private readonly string _environment;
 
-    public ApiWebApplicationFactory()
+    public ApiWebApplicationFactory(string connectionString, string environment = "Testing")
     {
-        _connection = new SqliteConnection("DataSource=:memory:");
-        _connection.Open();
+        _connectionString = connectionString;
+        _environment = environment;
     }
 
     public JsonSerializerOptions JsonOptions { get; } = new()
@@ -33,22 +34,23 @@ public class ApiWebApplicationFactory : WebApplicationFactory<Program>
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        builder.UseEnvironment("Testing");
+        builder.UseEnvironment(_environment);
+
+        builder.ConfigureAppConfiguration((_, config) =>
+        {
+            config.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["ConnectionStrings:DefaultConnection"] = _connectionString
+            });
+        });
 
         builder.ConfigureServices(services =>
         {
             services.RemoveAll<DbContextOptions<AppDbContext>>();
             services.RemoveAll<AppDbContext>();
 
-            services.AddDbContext<AppDbContext>(options => options.UseSqlite(_connection));
+            services.AddDbContext<AppDbContext>(options => options.UseVibeTestPostgreSql(_connectionString));
         });
-    }
-
-    protected override void Dispose(bool disposing)
-    {
-        if (disposing)
-            _connection.Dispose();
-        base.Dispose(disposing);
     }
 
     public async Task<string> RegisterAndGetTokenAsync(HttpClient client, string? email = null)
@@ -74,18 +76,4 @@ public class ApiWebApplicationFactory : WebApplicationFactory<Program>
         {
             Content = JsonContent.Create(body)
         });
-}
-
-public sealed class ApiFixture : IAsyncLifetime
-{
-    public ApiWebApplicationFactory Factory { get; } = new();
-
-    public async Task InitializeAsync()
-    {
-        using var scope = Factory.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        await db.Database.EnsureCreatedAsync();
-    }
-
-    public Task DisposeAsync() => Task.CompletedTask;
 }

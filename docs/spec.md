@@ -35,7 +35,7 @@
 
 
 **Стек технологий**:
-- **Бэкенд**: ASP.NET Core 10 (`VibeTest.Server`), Entity Framework Core, SQLite
+- **Бэкенд**: ASP.NET Core 10 (`VibeTest.Server`), Entity Framework Core, PostgreSQL
 - **Фронтенд**: React + TypeScript + Vite (`vibetest.client`)
 - **Режимы фронтенда**: `guest` (автономный, без API) и `full` (с бэкендом)
 - **Деплой гостевого SPA**: GitHub Pages (`npm run build:guest`)
@@ -122,7 +122,7 @@ VibeTest/
 │
 └── VibeTest.Tests/
     ├── Integration/
-    │   ├── SqliteTestDb.cs                # SQLite in-memory fixture
+    │   ├── PostgreSqlTestDb.cs            # изолированная БД на PostgreSQL
     │   ├── TestServiceTests.cs
     │   ├── ResultServiceTests.cs
     │   └── UserServiceTests.cs
@@ -697,7 +697,7 @@ public interface IUserService
 - `TestService`, `ResultService`, `UserService`, `ApplicationService`, `AuthService`
 - Репозитории с пагинацией и агрегациями
 - EF Core миграции в `VibeTest.Server/Data/Migrations/` (при старте — `Migrate()`, в `Testing` — `EnsureCreated()`)
-- Интеграционные тесты сервисов в `VibeTest.Tests` на SQLite
+- Интеграционные тесты сервисов в `VibeTest.Tests` на PostgreSQL (Testcontainers или внешний сервер)
 
 | Сервис | Покрытые сценарии |
 |--------|-------------------|

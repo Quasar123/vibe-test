@@ -2,12 +2,13 @@ using VibeTest.Server.Models.Requests;
 
 namespace VibeTest.Tests.Integration;
 
-public class UserServiceTests
+[Collection(PostgreSqlCollection.Name)]
+public class UserServiceTests(PostgreSqlTestFixture postgres)
 {
     [Fact]
     public async Task GetStats_calculates_created_published_passed_and_average()
     {
-        using var fx = new ServiceFixture();
+        using var fx = new ServiceFixture(postgres);
         var author = await fx.SeedUserAsync();
 
         var privateTest = await fx.TestService.CreateTest(author.Id, ServiceFixture.SampleTestRequest());
@@ -43,7 +44,7 @@ public class UserServiceTests
     [Fact]
     public async Task GetStats_counts_passing_others_tests_separately()
     {
-        using var fx = new ServiceFixture();
+        using var fx = new ServiceFixture(postgres);
         var author = await fx.SeedUserAsync();
         var other = await fx.SeedUserAsync("bob@test.com", "Bob");
 
@@ -72,7 +73,7 @@ public class UserServiceTests
     [Fact]
     public async Task GetStats_returns_zeros_for_new_user()
     {
-        using var fx = new ServiceFixture();
+        using var fx = new ServiceFixture(postgres);
         var user = await fx.SeedUserAsync("new@test.com", "New");
 
         var stats = await fx.UserService.GetStats(user.Id);

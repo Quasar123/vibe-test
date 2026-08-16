@@ -2,14 +2,14 @@ using System.Net;
 using System.Net.Http.Json;
 using VibeTest.Server.Models.Requests;
 using VibeTest.Server.Models.Responses;
+using VibeTest.Tests.Integration;
 
 namespace VibeTest.Tests.Integration.Api;
 
-public class UsersApiTests : IClassFixture<ApiFixture>
+[Collection(PostgreSqlCollection.Name)]
+public class UsersApiTests(PostgreSqlTestFixture postgres)
 {
-    private readonly ApiWebApplicationFactory _factory;
-
-    public UsersApiTests(ApiFixture fixture) => _factory = fixture.Factory;
+    private readonly ApiWebApplicationFactory _factory = postgres.Factory;
 
     [Fact]
     public async Task Search_requires_auth()

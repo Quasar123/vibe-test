@@ -9,21 +9,21 @@ public class ResultRepository(AppDbContext db) : IResultRepository
     private const string HistoryBaseCte = """
         WITH attempt_scores AS (
             SELECT
-                utr.TestId,
-                t.Name AS TestName,
-                t.QuestionsCount AS TotalQuestions,
-                utr.CorrectAnswer AS CorrectAnswers,
-                CAST(utr.CorrectAnswer AS REAL) / t.QuestionsCount * 100.0 AS ScorePercent,
+                utr.test_id,
+                t.name AS test_name,
+                t.questions_count AS total_questions,
+                utr.correct_answer AS correct_answers,
+                CAST(utr.correct_answer AS double precision) / t.questions_count * 100.0 AS score_percent,
                 (
-                    SELECT MAX(r.AnsweredAt)
-                    FROM Results r
-                    WHERE r.UserId = utr.UserId AND r.TestId = utr.TestId
-                ) AS CompletedAt
-            FROM UserTestResults utr
-            INNER JOIN Tests t ON t.Id = utr.TestId
-            WHERE utr.UserId = {0}
-              AND t.QuestionsCount > 0
-              AND (utr.CorrectAnswer + utr.IncorrectAnswer) > 0
+                    SELECT MAX(r.answered_at)
+                    FROM results r
+                    WHERE r.user_id = utr.user_id AND r.test_id = utr.test_id
+                ) AS completed_at
+            FROM user_test_results utr
+            INNER JOIN tests t ON t.id = utr.test_id
+            WHERE utr.user_id = {0}
+              AND t.questions_count > 0
+              AND (utr.correct_answer + utr.incorrect_answer) > 0
         )
         """;
 
@@ -50,12 +50,12 @@ public class ResultRepository(AppDbContext db) : IResultRepository
         var row = await db.Database
             .SqlQueryRaw<ScalarIntRow>(
                 """
-                SELECT a."Order" AS Value
-                FROM Answers a
-                INNER JOIN Questions q ON q.Id = a.QuestionId
-                WHERE q.TestId = {0}
-                  AND q."Order" = {1}
-                  AND a.IsCorrect = 1
+                SELECT a."order" AS value
+                FROM answers a
+                INNER JOIN questions q ON q.id = a.question_id
+                WHERE q.test_id = {0}
+                  AND q."order" = {1}
+                  AND a.is_correct = TRUE
                 LIMIT 1
                 """,
                 testId,
@@ -86,25 +86,25 @@ public class ResultRepository(AppDbContext db) : IResultRepository
             .SqlQueryRaw<TestResultSummaryRow>(
                 """
                 SELECT
-                    t.Id AS TestId,
-                    t.Name AS TestName,
-                    t.QuestionsCount AS TotalQuestions,
-                    COALESCE(utr.CorrectAnswer, 0) AS CorrectAnswers,
-                    COALESCE(utr.IncorrectAnswer, 0) AS IncorrectAnswers,
+                    t.id AS test_id,
+                    t.name AS test_name,
+                    t.questions_count AS total_questions,
+                    COALESCE(utr.correct_answer, 0) AS correct_answers,
+                    COALESCE(utr.incorrect_answer, 0) AS incorrect_answers,
                     (
-                        SELECT MIN(r.AnsweredAt)
-                        FROM Results r
-                        WHERE r.UserId = {0} AND r.TestId = {1}
-                    ) AS StartedAt,
+                        SELECT MIN(r.answered_at)
+                        FROM results r
+                        WHERE r.user_id = {0} AND r.test_id = {1}
+                    ) AS started_at,
                     (
-                        SELECT MAX(r.AnsweredAt)
-                        FROM Results r
-                        WHERE r.UserId = {0} AND r.TestId = {1}
-                    ) AS CompletedAt
-                FROM Tests t
-                LEFT JOIN UserTestResults utr
-                    ON utr.TestId = t.Id AND utr.UserId = {0}
-                WHERE t.Id = {1}
+                        SELECT MAX(r.answered_at)
+                        FROM results r
+                        WHERE r.user_id = {0} AND r.test_id = {1}
+                    ) AS completed_at
+                FROM tests t
+                LEFT JOIN user_test_results utr
+                    ON utr.test_id = t.id AND utr.user_id = {0}
+                WHERE t.id = {1}
                 """,
                 userId,
                 testId)
@@ -131,7 +131,7 @@ public class ResultRepository(AppDbContext db) : IResultRepository
     public async Task DeleteUserTestResultAsync(int userId, int testId, CancellationToken cancellationToken = default)
     {
         await db.Database.ExecuteSqlRawAsync(
-            "DELETE FROM UserTestResults WHERE UserId = {0} AND TestId = {1}",
+            """DELETE FROM user_test_results WHERE user_id = {0} AND test_id = {1}""",
             userId,
             testId);
     }
@@ -153,23 +153,23 @@ public class ResultRepository(AppDbContext db) : IResultRepository
             .SqlQueryRaw<AnsweredQuestionRow>(
                 """
                 SELECT
-                    q."Order" AS QuestionOrder,
-                    sel."Order" AS SelectedAnswerOrder,
-                    correct."Order" AS CorrectAnswerOrder,
-                    sel.IsCorrect AS IsCorrect,
-                    q.Explanation AS Explanation
-                FROM Results r
-                INNER JOIN Questions q
-                    ON q.Id = r.QuestionId
-                   AND q.TestId = r.TestId
-                INNER JOIN Answers sel
-                    ON sel.Id = r.AnswerId
-                   AND sel.QuestionId = r.QuestionId
-                INNER JOIN Answers correct
-                    ON correct.QuestionId = q.Id
-                   AND correct.IsCorrect = 1
-                WHERE r.UserId = {0} AND r.TestId = {1}
-                ORDER BY q."Order"
+                    q."order" AS question_order,
+                    sel."order" AS selected_answer_order,
+                    correct."order" AS correct_answer_order,
+                    sel.is_correct AS is_correct,
+                    q.explanation AS explanation
+                FROM results r
+                INNER JOIN questions q
+                    ON q.id = r.question_id
+                   AND q.test_id = r.test_id
+                INNER JOIN answers sel
+                    ON sel.id = r.answer_id
+                   AND sel.question_id = r.question_id
+                INNER JOIN answers correct
+                    ON correct.question_id = q.id
+                   AND correct.is_correct = TRUE
+                WHERE r.user_id = {0} AND r.test_id = {1}
+                ORDER BY q."order"
                 """,
                 userId,
                 testId)
@@ -178,7 +178,7 @@ public class ResultRepository(AppDbContext db) : IResultRepository
     public async Task DeleteByUserAndTestAsync(int userId, int testId, CancellationToken cancellationToken = default)
     {
         await db.Database.ExecuteSqlRawAsync(
-            "DELETE FROM Results WHERE UserId = {0} AND TestId = {1}",
+            """DELETE FROM results WHERE user_id = {0} AND test_id = {1}""",
             userId,
             testId);
     }
@@ -187,7 +187,7 @@ public class ResultRepository(AppDbContext db) : IResultRepository
     {
         var row = await db.Database
             .SqlQueryRaw<ScalarIntRow>(
-                HistoryBaseCte + "SELECT COUNT(*) AS Value FROM attempt_scores",
+                HistoryBaseCte + """SELECT COUNT(*) AS value FROM attempt_scores""",
                 userId)
             .FirstAsync(cancellationToken);
 
@@ -202,18 +202,18 @@ public class ResultRepository(AppDbContext db) : IResultRepository
         int pageSize,
         CancellationToken cancellationToken = default)
     {
-        var sortColumn = sortBy == "score" ? "ScorePercent" : "CompletedAt";
+        var sortColumn = sortBy == "score" ? "score_percent" : "completed_at";
         var sortDirection = order == "asc" ? "ASC" : "DESC";
 
         var sql = HistoryBaseCte +
                   """
                   SELECT
-                      TestId,
-                      TestName,
-                      TotalQuestions,
-                      CorrectAnswers,
-                      ScorePercent,
-                      CompletedAt
+                      test_id AS test_id,
+                      test_name AS test_name,
+                      total_questions AS total_questions,
+                      correct_answers AS correct_answers,
+                      score_percent AS score_percent,
+                      completed_at AS completed_at
                   FROM attempt_scores
                   ORDER BY 
                   """ + sortColumn + " " + sortDirection + """
@@ -244,25 +244,25 @@ public class ResultRepository(AppDbContext db) : IResultRepository
         var sql =
             """
             SELECT
-                t.Id AS TestId,
-                t.QuestionsCount AS TotalQuestions,
-                COALESCE(utr.CorrectAnswer, 0) + COALESCE(utr.IncorrectAnswer, 0) AS AnsweredCount,
-                COALESCE(utr.CorrectAnswer, 0) AS CorrectCount,
-                COALESCE(utr.IncorrectAnswer, 0) AS IncorrectCount,
+                t.id AS test_id,
+                t.questions_count AS total_questions,
+                COALESCE(utr.correct_answer, 0) + COALESCE(utr.incorrect_answer, 0) AS answered_count,
+                COALESCE(utr.correct_answer, 0) AS correct_count,
+                COALESCE(utr.incorrect_answer, 0) AS incorrect_count,
                 (
-                    SELECT MIN(r.AnsweredAt)
-                    FROM Results r
-                    WHERE r.UserId = {0} AND r.TestId = t.Id
-                ) AS StartedAt,
+                    SELECT MIN(r.answered_at)
+                    FROM results r
+                    WHERE r.user_id = {0} AND r.test_id = t.id
+                ) AS started_at,
                 (
-                    SELECT MAX(r.AnsweredAt)
-                    FROM Results r
-                    WHERE r.UserId = {0} AND r.TestId = t.Id
-                ) AS CompletedAt
-            FROM Tests t
-            LEFT JOIN UserTestResults utr
-                ON utr.TestId = t.Id AND utr.UserId = {0}
-            WHERE t.Id IN (
+                    SELECT MAX(r.answered_at)
+                    FROM results r
+                    WHERE r.user_id = {0} AND r.test_id = t.id
+                ) AS completed_at
+            FROM tests t
+            LEFT JOIN user_test_results utr
+                ON utr.test_id = t.id AND utr.user_id = {0}
+            WHERE t.id IN (
             """ + placeholders + ")";
 
         return await db.Database

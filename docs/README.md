@@ -1,6 +1,6 @@
 # Документация VibeTest
 
-VibeTest — конструктор и прохождение тестов в браузере. Два режима работы: **guest** (автономный SPA без бэкенда) и **full** (React + ASP.NET API + SQLite).
+VibeTest — конструктор и прохождение тестов в браузере. Два режима работы: **guest** (автономный SPA без бэкенда) и **full** (React + ASP.NET API + PostgreSQL).
 
 ## Оглавление
 
@@ -51,7 +51,7 @@ flowchart LR
   subgraph fullMode [Full mode]
     spaFull[React SPA]
     api[ASP.NET API]
-    db[(SQLite)]
+    db[(PostgreSQL)]
     spaFull --> api --> db
     spaFull --> ls
   end

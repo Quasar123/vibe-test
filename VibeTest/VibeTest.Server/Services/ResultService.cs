@@ -179,7 +179,7 @@ public class ResultService(
                 QuestionOrder = row.QuestionOrder,
                 SelectedAnswerOrder = row.SelectedAnswerOrder,
                 CorrectAnswerOrder = row.CorrectAnswerOrder,
-                IsCorrect = row.IsCorrect == 1,
+                IsCorrect = row.IsCorrect,
                 Explanation = string.IsNullOrWhiteSpace(row.Explanation) ? null : row.Explanation
             }).ToList()
         };

@@ -1,19 +1,19 @@
 using System.Net;
 using System.Net.Http.Json;
 using VibeTest.Server.Models.Requests;
+using VibeTest.Tests.Integration;
 
 namespace VibeTest.Tests.Integration.Api;
 
-public class AuthRateLimitApiTests : IClassFixture<ApiFixture>
+[Collection(PostgreSqlCollection.Name)]
+public class AuthRateLimitApiTests(PostgreSqlTestFixture postgres)
 {
-    private readonly ApiWebApplicationFactory _factory;
-
-    public AuthRateLimitApiTests(ApiFixture fixture) => _factory = fixture.Factory;
-
     [Fact]
     public async Task Login_exceeding_rate_limit_returns_429_with_retry_after()
     {
-        var client = _factory.CreateClient();
+        using var database = new PostgreSqlTestDb(postgres.ConnectionString);
+        using var factory = new ApiWebApplicationFactory(database.ConnectionString, "RateLimitTesting");
+        var client = factory.CreateClient();
         var loginRequest = new LoginRequest
         {
             Email = "rate-limit@test.com",

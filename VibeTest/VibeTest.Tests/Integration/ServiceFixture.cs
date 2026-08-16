@@ -9,10 +9,12 @@ namespace VibeTest.Tests.Integration;
 
 public sealed class ServiceFixture : IDisposable
 {
-    private readonly SqliteTestDb _db = new();
+    private readonly PostgreSqlTestDb _db;
 
-    public ServiceFixture()
+    public ServiceFixture(PostgreSqlTestFixture postgres)
     {
+        _db = new PostgreSqlTestDb(postgres.ConnectionString);
+
         TestRepository = new TestRepository(_db.Db);
         ResultRepository = new ResultRepository(_db.Db);
         ApplicationRepository = new ApplicationRepository(_db.Db);

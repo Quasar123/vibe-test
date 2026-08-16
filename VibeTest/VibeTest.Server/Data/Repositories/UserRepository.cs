@@ -37,40 +37,40 @@ public class UserRepository(AppDbContext db) : IUserRepository
             .SqlQueryRaw<UserStatsRow>(
                 """
                 SELECT
-                    (SELECT COUNT(*) FROM Tests WHERE AuthorId = {0}) AS TotalCreated,
-                    (SELECT COUNT(*) FROM Tests WHERE AuthorId = {0} AND IsPublic = 1) AS TotalPublished,
+                    (SELECT COUNT(*) FROM tests WHERE author_id = {0}) AS total_created,
+                    (SELECT COUNT(*) FROM tests WHERE author_id = {0} AND is_public = TRUE) AS total_published,
                     (
                         SELECT COUNT(*)
-                        FROM UserTestResults utr
-                        INNER JOIN Tests t ON t.Id = utr.TestId AND t.AuthorId = {0}
-                        WHERE utr.UserId = {0}
-                          AND t.QuestionsCount > 0
-                          AND utr.CorrectAnswer + utr.IncorrectAnswer = t.QuestionsCount
-                    ) AS TotalPassedOwn,
+                        FROM user_test_results utr
+                        INNER JOIN tests t ON t.id = utr.test_id AND t.author_id = {0}
+                        WHERE utr.user_id = {0}
+                          AND t.questions_count > 0
+                          AND utr.correct_answer + utr.incorrect_answer = t.questions_count
+                    ) AS total_passed_own,
                     (
                         SELECT COUNT(*)
-                        FROM UserTestResults utr
-                        INNER JOIN Tests t ON t.Id = utr.TestId AND t.AuthorId <> {0}
-                        WHERE utr.UserId = {0}
-                          AND t.QuestionsCount > 0
-                          AND utr.CorrectAnswer + utr.IncorrectAnswer = t.QuestionsCount
-                    ) AS TotalPassedOthers,
+                        FROM user_test_results utr
+                        INNER JOIN tests t ON t.id = utr.test_id AND t.author_id <> {0}
+                        WHERE utr.user_id = {0}
+                          AND t.questions_count > 0
+                          AND utr.correct_answer + utr.incorrect_answer = t.questions_count
+                    ) AS total_passed_others,
                     COALESCE((
-                        SELECT AVG(CAST(utr.CorrectAnswer AS REAL) / t.QuestionsCount * 100.0)
-                        FROM UserTestResults utr
-                        INNER JOIN Tests t ON t.Id = utr.TestId AND t.AuthorId = {0}
-                        WHERE utr.UserId = {0}
-                          AND t.QuestionsCount > 0
-                          AND utr.CorrectAnswer + utr.IncorrectAnswer = t.QuestionsCount
-                    ), 0.0) AS AverageScoreOwn,
+                        SELECT AVG(CAST(utr.correct_answer AS double precision) / t.questions_count * 100.0)
+                        FROM user_test_results utr
+                        INNER JOIN tests t ON t.id = utr.test_id AND t.author_id = {0}
+                        WHERE utr.user_id = {0}
+                          AND t.questions_count > 0
+                          AND utr.correct_answer + utr.incorrect_answer = t.questions_count
+                    ), 0.0) AS average_score_own,
                     COALESCE((
-                        SELECT AVG(CAST(utr.CorrectAnswer AS REAL) / t.QuestionsCount * 100.0)
-                        FROM UserTestResults utr
-                        INNER JOIN Tests t ON t.Id = utr.TestId AND t.AuthorId <> {0}
-                        WHERE utr.UserId = {0}
-                          AND t.QuestionsCount > 0
-                          AND utr.CorrectAnswer + utr.IncorrectAnswer = t.QuestionsCount
-                    ), 0.0) AS AverageScoreOthers
+                        SELECT AVG(CAST(utr.correct_answer AS double precision) / t.questions_count * 100.0)
+                        FROM user_test_results utr
+                        INNER JOIN tests t ON t.id = utr.test_id AND t.author_id <> {0}
+                        WHERE utr.user_id = {0}
+                          AND t.questions_count > 0
+                          AND utr.correct_answer + utr.incorrect_answer = t.questions_count
+                    ), 0.0) AS average_score_others
                 """,
                 userId)
             .FirstAsync(cancellationToken);
