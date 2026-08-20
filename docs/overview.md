@@ -18,7 +18,7 @@ flowchart LR
   subgraph fullMode [Full mode]
     spaFull[React SPA]
     api[ASP.NET API]
-    db[(SQLite)]
+    db[(PostgreSQL)]
     spaFull --> api --> db
     spaFull --> ls
   end
@@ -40,7 +40,7 @@ flowchart LR
 | Слой | Технологии |
 |------|------------|
 | Фронтенд | React 19, TypeScript, Vite 8, React Router 7 |
-| Бэкенд | ASP.NET Core 10, Entity Framework Core, SQLite |
+| Бэкенд | ASP.NET Core 10, Entity Framework Core, PostgreSQL |
 | Аутентификация | JWT Bearer (только full) |
 | E2E | Playwright |
 | CI | GitHub Actions (E2E, деплой guest на Pages) |
@@ -64,7 +64,7 @@ vibe-test/
 - **Controllers** — REST API (`AuthController`, `TestsController`, `ResultsController`, `ApplicationsController`)
 - **Services** — бизнес-логика (`TestService`, `ResultService`, `ApplicationService`, `AuthService`, `UserService`)
 - **Data** — `AppDbContext`, репозитории, миграции EF
-- При старте (кроме `Testing`) выполняется `Database.Migrate()`
+- При старте выполняется `Database.Migrate()`
 
 ### vibetest.client
 
@@ -75,7 +75,7 @@ vibe-test/
 
 ### VibeTest.Tests
 
-Интеграционные тесты сервисов на SQLite in-memory и API через `WebApplicationFactory`.
+Интеграционные тесты сервисов и API на PostgreSQL (Testcontainers или внешний сервер через `ConnectionStrings__DefaultConnection`).
 
 ## Переменные окружения фронтенда
 

@@ -29,7 +29,7 @@ public class AuthRepository(AppDbContext db) : IAuthRepository
     }
 
     public Task<int> DeleteRefreshTokenByValueAsync(string token, CancellationToken cancellationToken = default) =>
-        db.Database.ExecuteSqlRawAsync("DELETE FROM RefreshTokens WHERE Token = {0}", token);
+        db.Database.ExecuteSqlRawAsync("""DELETE FROM refresh_tokens WHERE token = {0}""", token);
 
     public Task SaveChangesAsync(CancellationToken cancellationToken = default) =>
         db.SaveChangesAsync(cancellationToken);

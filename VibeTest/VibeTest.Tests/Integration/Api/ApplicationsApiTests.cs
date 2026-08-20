@@ -7,11 +7,10 @@ using VibeTest.Tests.Integration;
 
 namespace VibeTest.Tests.Integration.Api;
 
-public class ApplicationsApiTests : IClassFixture<ApiFixture>
+[Collection(PostgreSqlCollection.Name)]
+public class ApplicationsApiTests(PostgreSqlTestFixture postgres)
 {
-    private readonly ApiWebApplicationFactory _factory;
-
-    public ApplicationsApiTests(ApiFixture fixture) => _factory = fixture.Factory;
+    private readonly ApiWebApplicationFactory _factory = postgres.Factory;
 
     [Fact]
     public async Task Create_list_and_anonymous_play_flow()

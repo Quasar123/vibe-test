@@ -4,12 +4,13 @@ using VibeTest.Server.Models.Requests;
 
 namespace VibeTest.Tests.Integration;
 
-public class ApplicationServiceTests
+[Collection(PostgreSqlCollection.Name)]
+public class ApplicationServiceTests(PostgreSqlTestFixture postgres)
 {
     [Fact]
     public async Task CreateApplication_link_type_sets_title_no_recipient()
     {
-        using var fx = new ServiceFixture();
+        using var fx = new ServiceFixture(postgres);
         var author = await fx.SeedUserAsync();
         var test = await fx.TestService.CreateTest(author.Id, ServiceFixture.SampleTestRequest());
 
@@ -31,7 +32,7 @@ public class ApplicationServiceTests
     [Fact]
     public async Task CreateApplication_succeeds_for_private_own_test()
     {
-        using var fx = new ServiceFixture();
+        using var fx = new ServiceFixture(postgres);
         var author = await fx.SeedUserAsync();
         var test = await fx.TestService.CreateTest(author.Id, ServiceFixture.SampleTestRequest());
 
@@ -49,7 +50,7 @@ public class ApplicationServiceTests
     [Fact]
     public async Task CreateApplication_rejects_public_test()
     {
-        using var fx = new ServiceFixture();
+        using var fx = new ServiceFixture(postgres);
         var author = await fx.SeedUserAsync();
         var test = await fx.TestService.CreateTest(author.Id, ServiceFixture.SampleTestRequest());
         await fx.TestService.PublishTest(test.Id, author.Id);
@@ -65,7 +66,7 @@ public class ApplicationServiceTests
     [Fact]
     public async Task CreateApplication_rejects_foreign_test()
     {
-        using var fx = new ServiceFixture();
+        using var fx = new ServiceFixture(postgres);
         var author = await fx.SeedUserAsync();
         var other = await fx.SeedUserAsync("other@test.com", "Other");
         var test = await fx.TestService.CreateTest(other.Id, ServiceFixture.SampleTestRequest());
@@ -81,7 +82,7 @@ public class ApplicationServiceTests
     [Fact]
     public async Task CreateApplication_internal_requires_recipient()
     {
-        using var fx = new ServiceFixture();
+        using var fx = new ServiceFixture(postgres);
         var author = await fx.SeedUserAsync();
         var test = await fx.TestService.CreateTest(author.Id, ServiceFixture.SampleTestRequest());
 
@@ -97,7 +98,7 @@ public class ApplicationServiceTests
     [Fact]
     public async Task CreateApplication_link_rejects_recipientUserId()
     {
-        using var fx = new ServiceFixture();
+        using var fx = new ServiceFixture(postgres);
         var author = await fx.SeedUserAsync();
         var recipient = await fx.SeedUserAsync("bob@test.com", "Bob");
         var test = await fx.TestService.CreateTest(author.Id, ServiceFixture.SampleTestRequest());
@@ -115,7 +116,7 @@ public class ApplicationServiceTests
     [Fact]
     public async Task SubmitAnswer_and_result_work_via_token()
     {
-        using var fx = new ServiceFixture();
+        using var fx = new ServiceFixture(postgres);
         var author = await fx.SeedUserAsync();
         var test = await fx.TestService.CreateTest(author.Id, ServiceFixture.SampleTestRequest());
         var app = await fx.ApplicationService.CreateApplication(author.Id, new CreateApplicationRequest
@@ -159,7 +160,7 @@ public class ApplicationServiceTests
     [Fact]
     public async Task GetApplicationPlayDetail_returns_test_for_anonymous_token()
     {
-        using var fx = new ServiceFixture();
+        using var fx = new ServiceFixture(postgres);
         var author = await fx.SeedUserAsync();
         var test = await fx.TestService.CreateTest(author.Id, ServiceFixture.SampleTestRequest());
         var app = await fx.ApplicationService.CreateApplication(author.Id, new CreateApplicationRequest
@@ -179,7 +180,7 @@ public class ApplicationServiceTests
     [Fact]
     public async Task CreateApplication_with_hideResults_flag()
     {
-        using var fx = new ServiceFixture();
+        using var fx = new ServiceFixture(postgres);
         var author = await fx.SeedUserAsync();
         var test = await fx.TestService.CreateTest(author.Id, ServiceFixture.SampleTestRequest());
 
@@ -199,7 +200,7 @@ public class ApplicationServiceTests
     [Fact]
     public async Task SubmitAnswer_rejects_reanswer_before_completion()
     {
-        using var fx = new ServiceFixture();
+        using var fx = new ServiceFixture(postgres);
         var author = await fx.SeedUserAsync();
         var test = await fx.TestService.CreateTest(author.Id, ServiceFixture.SampleTestRequest());
         var app = await fx.ApplicationService.CreateApplication(author.Id, new CreateApplicationRequest
@@ -227,7 +228,7 @@ public class ApplicationServiceTests
     [Fact]
     public async Task GetApplicationAnsweredQuestions_returns_saved_answers()
     {
-        using var fx = new ServiceFixture();
+        using var fx = new ServiceFixture(postgres);
         var author = await fx.SeedUserAsync();
         var test = await fx.TestService.CreateTest(author.Id, ServiceFixture.SampleTestRequest());
         var app = await fx.ApplicationService.CreateApplication(author.Id, new CreateApplicationRequest
@@ -252,7 +253,7 @@ public class ApplicationServiceTests
     [Fact]
     public async Task SubmitAnswer_after_completed_throws()
     {
-        using var fx = new ServiceFixture();
+        using var fx = new ServiceFixture(postgres);
         var author = await fx.SeedUserAsync();
         var test = await fx.TestService.CreateTest(author.Id, ServiceFixture.SampleTestRequest());
         var app = await fx.ApplicationService.CreateApplication(author.Id, new CreateApplicationRequest
@@ -283,7 +284,7 @@ public class ApplicationServiceTests
     [Fact]
     public async Task SubmitAnswer_hideResults_omits_feedback()
     {
-        using var fx = new ServiceFixture();
+        using var fx = new ServiceFixture(postgres);
         var author = await fx.SeedUserAsync();
         var test = await fx.TestService.CreateTest(author.Id, ServiceFixture.SampleTestRequest());
         var app = await fx.ApplicationService.CreateApplication(author.Id, new CreateApplicationRequest
@@ -306,7 +307,7 @@ public class ApplicationServiceTests
     [Fact]
     public async Task GetApplicationResult_hideResults_forbidden()
     {
-        using var fx = new ServiceFixture();
+        using var fx = new ServiceFixture(postgres);
         var author = await fx.SeedUserAsync();
         var test = await fx.TestService.CreateTest(author.Id, ServiceFixture.SampleTestRequest());
         var app = await fx.ApplicationService.CreateApplication(author.Id, new CreateApplicationRequest
@@ -329,7 +330,7 @@ public class ApplicationServiceTests
     [Fact]
     public async Task CreateApplication_internal_sets_type_and_recipient()
     {
-        using var fx = new ServiceFixture();
+        using var fx = new ServiceFixture(postgres);
         var author = await fx.SeedUserAsync();
         var recipient = await fx.SeedUserAsync("bob@test.com", "Bob");
         var test = await fx.TestService.CreateTest(author.Id, ServiceFixture.SampleTestRequest());
@@ -355,7 +356,7 @@ public class ApplicationServiceTests
     [Fact]
     public async Task Author_list_internal_has_empty_playUrl()
     {
-        using var fx = new ServiceFixture();
+        using var fx = new ServiceFixture(postgres);
         var author = await fx.SeedUserAsync();
         var recipient = await fx.SeedUserAsync("bob@test.com", "Bob");
         var test = await fx.TestService.CreateTest(author.Id, ServiceFixture.SampleTestRequest());
@@ -376,7 +377,7 @@ public class ApplicationServiceTests
     [Fact]
     public async Task Internal_play_forbidden_anonymous_and_wrong_user()
     {
-        using var fx = new ServiceFixture();
+        using var fx = new ServiceFixture(postgres);
         var author = await fx.SeedUserAsync();
         var recipient = await fx.SeedUserAsync("bob@test.com", "Bob");
         var other = await fx.SeedUserAsync("carol@test.com", "Carol");
@@ -410,7 +411,7 @@ public class ApplicationServiceTests
     [Fact]
     public async Task Internal_play_allowed_for_recipient_with_jwt()
     {
-        using var fx = new ServiceFixture();
+        using var fx = new ServiceFixture(postgres);
         var author = await fx.SeedUserAsync();
         var recipient = await fx.SeedUserAsync("bob@test.com", "Bob");
         var test = await fx.TestService.CreateTest(author.Id, ServiceFixture.SampleTestRequest());
@@ -438,7 +439,7 @@ public class ApplicationServiceTests
     [Fact]
     public async Task CreateApplication_rejects_self_as_recipient()
     {
-        using var fx = new ServiceFixture();
+        using var fx = new ServiceFixture(postgres);
         var author = await fx.SeedUserAsync();
         var test = await fx.TestService.CreateTest(author.Id, ServiceFixture.SampleTestRequest());
 
@@ -455,7 +456,7 @@ public class ApplicationServiceTests
     [Fact]
     public async Task GetIncoming_returns_only_for_recipient()
     {
-        using var fx = new ServiceFixture();
+        using var fx = new ServiceFixture(postgres);
         var author = await fx.SeedUserAsync();
         var recipient = await fx.SeedUserAsync("bob@test.com", "Bob");
         var other = await fx.SeedUserAsync("carol@test.com", "Carol");
@@ -486,7 +487,7 @@ public class ApplicationServiceTests
     [Fact]
     public async Task UserSearch_excludes_self()
     {
-        using var fx = new ServiceFixture();
+        using var fx = new ServiceFixture(postgres);
         var author = await fx.SeedUserAsync();
         await fx.SeedUserAsync("bob@test.com", "Bob");
 

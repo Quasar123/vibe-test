@@ -3,12 +3,13 @@ using VibeTest.Server.Models.Requests;
 
 namespace VibeTest.Tests.Integration;
 
-public class ResultServiceTests
+[Collection(PostgreSqlCollection.Name)]
+public class ResultServiceTests(PostgreSqlTestFixture postgres)
 {
     [Fact]
     public async Task SubmitAnswer_updates_user_test_result_aggregate()
     {
-        using var fx = new ServiceFixture();
+        using var fx = new ServiceFixture(postgres);
         var author = await fx.SeedUserAsync();
         var test = await fx.TestService.CreateTest(author.Id, ServiceFixture.SampleTestRequest());
         await fx.TestService.PublishTest(test.Id, author.Id);
@@ -40,7 +41,7 @@ public class ResultServiceTests
     [Fact]
     public async Task DeleteResult_clears_user_test_result_aggregate()
     {
-        using var fx = new ServiceFixture();
+        using var fx = new ServiceFixture(postgres);
         var author = await fx.SeedUserAsync();
         var test = await fx.TestService.CreateTest(author.Id, ServiceFixture.SampleTestRequest());
         await fx.TestService.PublishTest(test.Id, author.Id);
@@ -61,7 +62,7 @@ public class ResultServiceTests
     [Fact]
     public async Task AppendQuestions_keeps_existing_aggregate_and_updates_total_questions()
     {
-        using var fx = new ServiceFixture();
+        using var fx = new ServiceFixture(postgres);
         var author = await fx.SeedUserAsync();
         var test = await fx.TestService.CreateTest(author.Id, ServiceFixture.SampleTestRequest());
         await fx.TestService.PublishTest(test.Id, author.Id);
@@ -99,7 +100,7 @@ public class ResultServiceTests
     [Fact]
     public async Task SubmitAnswer_returns_explanation_when_present()
     {
-        using var fx = new ServiceFixture();
+        using var fx = new ServiceFixture(postgres);
         var author = await fx.SeedUserAsync();
         var test = await fx.TestService.CreateTest(author.Id, new CreateTestRequest
         {
@@ -129,7 +130,7 @@ public class ResultServiceTests
     [Fact]
     public async Task SubmitAnswer_rejects_reanswer_on_same_question()
     {
-        using var fx = new ServiceFixture();
+        using var fx = new ServiceFixture(postgres);
         var author = await fx.SeedUserAsync();
         var test = await fx.TestService.CreateTest(author.Id, ServiceFixture.SampleTestRequest());
         await fx.TestService.PublishTest(test.Id, author.Id);
@@ -157,7 +158,7 @@ public class ResultServiceTests
     [Fact]
     public async Task GetAnsweredQuestions_returns_saved_answers()
     {
-        using var fx = new ServiceFixture();
+        using var fx = new ServiceFixture(postgres);
         var author = await fx.SeedUserAsync();
         var test = await fx.TestService.CreateTest(author.Id, ServiceFixture.SampleTestRequest());
         await fx.TestService.PublishTest(test.Id, author.Id);
@@ -180,7 +181,7 @@ public class ResultServiceTests
     [Fact]
     public async Task SubmitAnswer_returns_correct_order_without_reanswer()
     {
-        using var fx = new ServiceFixture();
+        using var fx = new ServiceFixture(postgres);
         var author = await fx.SeedUserAsync();
         var test = await fx.TestService.CreateTest(author.Id, ServiceFixture.SampleTestRequest());
         await fx.TestService.PublishTest(test.Id, author.Id);
@@ -211,7 +212,7 @@ public class ResultServiceTests
     [Fact]
     public async Task AppendQuestions_allows_resolving_new_questions()
     {
-        using var fx = new ServiceFixture();
+        using var fx = new ServiceFixture(postgres);
         var author = await fx.SeedUserAsync();
         var test = await fx.TestService.CreateTest(author.Id, ServiceFixture.SampleTestRequest());
         await fx.TestService.PublishTest(test.Id, author.Id);
@@ -251,7 +252,7 @@ public class ResultServiceTests
     [Fact]
     public async Task DeleteResult_clears_attempt_for_retake()
     {
-        using var fx = new ServiceFixture();
+        using var fx = new ServiceFixture(postgres);
         var author = await fx.SeedUserAsync();
         var test = await fx.TestService.CreateTest(author.Id, ServiceFixture.SampleTestRequest());
         await fx.TestService.PublishTest(test.Id, author.Id);
@@ -268,7 +269,7 @@ public class ResultServiceTests
     [Fact]
     public async Task GetUserResults_returns_history()
     {
-        using var fx = new ServiceFixture();
+        using var fx = new ServiceFixture(postgres);
         var author = await fx.SeedUserAsync();
         var test = await fx.TestService.CreateTest(author.Id, ServiceFixture.SampleTestRequest());
         await fx.TestService.PublishTest(test.Id, author.Id);
@@ -286,7 +287,7 @@ public class ResultServiceTests
     [Fact]
     public async Task GetUserTestProgress_returns_bulk_progress_for_requested_tests()
     {
-        using var fx = new ServiceFixture();
+        using var fx = new ServiceFixture(postgres);
         var author = await fx.SeedUserAsync();
         var test = await fx.TestService.CreateTest(author.Id, ServiceFixture.SampleTestRequest());
         await fx.TestService.PublishTest(test.Id, author.Id);
@@ -330,7 +331,7 @@ public class ResultServiceTests
     [Fact]
     public async Task GetUserTestProgress_returns_empty_for_no_ids()
     {
-        using var fx = new ServiceFixture();
+        using var fx = new ServiceFixture(postgres);
         var author = await fx.SeedUserAsync();
 
         var progress = await fx.ResultService.GetUserTestProgress(author.Id, []);

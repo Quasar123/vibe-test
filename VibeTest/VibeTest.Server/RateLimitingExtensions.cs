@@ -39,14 +39,23 @@ public static class RateLimitingExtensions
                 return ValueTask.CompletedTask;
             };
 
-            limiterOptions.AddPolicy(RateLimitPolicies.GlobalApi, httpContext =>
-                CreateFixedWindowPartition(httpContext, options.Global));
+            if (!options.Enabled)
+            {
+                limiterOptions.AddPolicy(RateLimitPolicies.GlobalApi, _ => RateLimitPartition.GetNoLimiter(string.Empty));
+                limiterOptions.AddPolicy(RateLimitPolicies.AuthLogin, _ => RateLimitPartition.GetNoLimiter(string.Empty));
+                limiterOptions.AddPolicy(RateLimitPolicies.AuthRegisterRefresh, _ => RateLimitPartition.GetNoLimiter(string.Empty));
+            }
+            else
+            {
+                limiterOptions.AddPolicy(RateLimitPolicies.GlobalApi, httpContext =>
+                    CreateFixedWindowPartition(httpContext, options.Global));
 
-            limiterOptions.AddPolicy(RateLimitPolicies.AuthLogin, httpContext =>
-                CreateFixedWindowPartition(httpContext, options.AuthLogin));
+                limiterOptions.AddPolicy(RateLimitPolicies.AuthLogin, httpContext =>
+                    CreateFixedWindowPartition(httpContext, options.AuthLogin));
 
-            limiterOptions.AddPolicy(RateLimitPolicies.AuthRegisterRefresh, httpContext =>
-                CreateFixedWindowPartition(httpContext, options.AuthRegisterRefresh));
+                limiterOptions.AddPolicy(RateLimitPolicies.AuthRegisterRefresh, httpContext =>
+                    CreateFixedWindowPartition(httpContext, options.AuthRegisterRefresh));
+            }
         });
 
         return services;

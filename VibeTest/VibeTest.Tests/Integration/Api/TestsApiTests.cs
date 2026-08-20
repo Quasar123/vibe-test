@@ -6,11 +6,10 @@ using VibeTest.Tests.Integration;
 
 namespace VibeTest.Tests.Integration.Api;
 
-public class TestsApiTests : IClassFixture<ApiFixture>
+[Collection(PostgreSqlCollection.Name)]
+public class TestsApiTests(PostgreSqlTestFixture postgres)
 {
-    private readonly ApiWebApplicationFactory _factory;
-
-    public TestsApiTests(ApiFixture fixture) => _factory = fixture.Factory;
+    private readonly ApiWebApplicationFactory _factory = postgres.Factory;
 
     [Fact]
     public async Task Create_publish_and_get_public_test()

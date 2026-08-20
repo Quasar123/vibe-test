@@ -22,6 +22,9 @@ export default defineConfig({
       cwd: '..',
       env: {
         ASPNETCORE_ENVIRONMENT: 'E2E',
+        ConnectionStrings__DefaultConnection:
+          process.env.ConnectionStrings__DefaultConnection
+          ?? 'Host=localhost;Port=5432;Database=vibetest_e2e;Username=vibetest;Password=changeme',
       },
       url: `http://localhost:${apiPort}/api/tests`,
       reuseExistingServer: !process.env.CI,

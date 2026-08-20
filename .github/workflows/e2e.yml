@@ -12,6 +12,24 @@ jobs:
       run:
         working-directory: VibeTest/vibetest.client
 
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: vibetest
+          POSTGRES_PASSWORD: changeme
+          POSTGRES_DB: vibetest_e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U vibetest -d vibetest_e2e"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      ConnectionStrings__DefaultConnection: Host=localhost;Port=5432;Database=vibetest_e2e;Username=vibetest;Password=changeme
+
     steps:
       - uses: actions/checkout@v4
 

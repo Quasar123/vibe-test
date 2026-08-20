@@ -35,7 +35,7 @@
 
 
 **Стек технологий**:
-- **Бэкенд**: ASP.NET Core 10 (`VibeTest.Server`), Entity Framework Core, SQLite
+- **Бэкенд**: ASP.NET Core 10 (`VibeTest.Server`), Entity Framework Core, PostgreSQL
 - **Фронтенд**: React + TypeScript + Vite (`vibetest.client`)
 - **Режимы фронтенда**: `guest` (автономный, без API) и `full` (с бэкендом)
 - **Деплой гостевого SPA**: GitHub Pages (`npm run build:guest`)
@@ -74,8 +74,6 @@ VibeTest/
 │   │   ├── Repositories/
 │   │   │   ├── ITestRepository.cs
 │   │   │   ├── TestRepository.cs
-│   │   │   ├── IQuestionAnswerRepository.cs
-│   │   │   ├── QuestionAnswerRepository.cs
 │   │   │   ├── IResultRepository.cs
 │   │   │   └── ResultRepository.cs
 │   │   └── Migrations/                    # dotnet ef migrations add
@@ -86,7 +84,7 @@ VibeTest/
 │   │   └── Responses/
 │   │
 │   ├── Helpers/
-│   │   ├── TqaGrouper.cs                  # TQA → иерархия вопросов/ответов
+│   │   ├── QuestionMapper.cs              # Questions/Answers → DTO
 │   │   └── PaginationHelper.cs
 │   │
 │   ├── Exceptions/
@@ -124,7 +122,7 @@ VibeTest/
 │
 └── VibeTest.Tests/
     ├── Integration/
-    │   ├── SqliteTestDb.cs                # SQLite in-memory fixture
+    │   ├── PostgreSqlTestDb.cs            # изолированная БД на PostgreSQL
     │   ├── TestServiceTests.cs
     │   ├── ResultServiceTests.cs
     │   └── UserServiceTests.cs
@@ -185,26 +183,22 @@ CREATE TABLE Tests (
 
 CREATE TABLE Questions (
     Id INTEGER PRIMARY KEY,
-    Text TEXT NOT NULL UNIQUE
+    TestId INTEGER NOT NULL,
+    Text TEXT NOT NULL,
+    "Order" INTEGER NOT NULL,
+    Explanation TEXT,
+    FOREIGN KEY (TestId) REFERENCES Tests(Id) ON DELETE CASCADE,
+    UNIQUE(TestId, "Order")
 );
 
 CREATE TABLE Answers (
     Id INTEGER PRIMARY KEY,
-    Text TEXT NOT NULL UNIQUE
-);
-
-CREATE TABLE TestQuestionAnswers (
-    Id INTEGER PRIMARY KEY,
-    TestId INTEGER NOT NULL,
     QuestionId INTEGER NOT NULL,
-    AnswerId INTEGER NOT NULL,
-    QuestionOrder INTEGER NOT NULL,
-    AnswerOrder INTEGER NOT NULL,
+    Text TEXT NOT NULL,
+    "Order" INTEGER NOT NULL,
     IsCorrect INTEGER NOT NULL DEFAULT 0,
-    FOREIGN KEY (TestId) REFERENCES Tests(Id) ON DELETE CASCADE,
-    FOREIGN KEY (QuestionId) REFERENCES Questions(Id) ON DELETE RESTRICT,
-    FOREIGN KEY (AnswerId) REFERENCES Answers(Id) ON DELETE RESTRICT,
-    UNIQUE(TestId, QuestionOrder, AnswerOrder)
+    FOREIGN KEY (QuestionId) REFERENCES Questions(Id) ON DELETE CASCADE,
+    UNIQUE(QuestionId, "Order")
 );
 
 CREATE TABLE Results (
@@ -224,10 +218,10 @@ CREATE TABLE Results (
 
 ### Примечания к схеме
 
-- **Структура теста** хранится в `TestQuestionAnswers` (TQA): одна строка = один вариант ответа в вопросе.
-- **Question** и **Answer** — глобальный пул с дедупликацией по `Text` (UNIQUE).
-- **Result**: `UNIQUE(UserId, TestId, QuestionId)` — повторный submit обновляет ответ (UPSERT).
-- Порядок вопросов/ответов — **0-based** (`QuestionOrder`, `AnswerOrder`).
+- **Структура теста** — иерархия `Tests → Questions → Answers`; каждый вопрос и ответ принадлежит конкретному тесту.
+- **Explanation** хранится в `Questions.Explanation` (per-test, per-question).
+- **Result**: `UNIQUE(UserId, TestId, QuestionId)` — повторный submit запрещён (insert-only).
+- Порядок вопросов/ответов — **0-based** (`Questions.Order`, `Answers.Order`).
 
 ---
 
@@ -258,37 +252,28 @@ public class Test
     public DateTime UpdatedAt { get; set; }
     
     public User Author { get; set; }
-    public List<TestQuestionAnswer> QuestionAnswers { get; set; }
+    public List<Question> Questions { get; set; }
 }
 
 // Question.cs
 public class Question
 {
     public int Id { get; set; }
+    public int TestId { get; set; }
     public string Text { get; set; }
+    public int Order { get; set; }
+    public string? Explanation { get; set; }
+    public List<Answer> Answers { get; set; }
 }
 
 // Answer.cs
 public class Answer
 {
     public int Id { get; set; }
-    public string Text { get; set; }
-}
-
-// TestQuestionAnswer.cs
-public class TestQuestionAnswer
-{
-    public int Id { get; set; }
-    public int TestId { get; set; }
     public int QuestionId { get; set; }
-    public int AnswerId { get; set; }
-    public int QuestionOrder { get; set; }
-    public int AnswerOrder { get; set; }
+    public string Text { get; set; }
+    public int Order { get; set; }
     public bool IsCorrect { get; set; }
-    
-    public Test Test { get; set; }
-    public Question Question { get; set; }
-    public Answer Answer { get; set; }
 }
 
 // Result.cs
@@ -350,9 +335,8 @@ public interface IUserService
 
 | Интерфейс | Ответственность |
 |-----------|-----------------|
-| `ITestRepository` | CRUD теста, загрузка с TQA + Question + Answer |
-| `IQuestionAnswerRepository` | Find-or-create по `Text` (дедупликация) |
-| `IResultRepository` | UPSERT, удаление по user+test, выборки |
+| `ITestRepository` | CRUD теста, загрузка с Questions + Answers |
+| `IResultRepository` | Insert-only Results, удаление по user+test, выборки |
 
 Сервисы не содержат сложный LINQ — запросы в репозиториях.
 
@@ -366,7 +350,7 @@ public interface IUserService
 
 ### Вспомогательные классы
 
-- **`TqaGrouper`** — `List<TestQuestionAnswer>` → `QuestionDetailDto` / `QuestionFullDto`
+- **`QuestionMapper`** — `IEnumerable<Question>` → `QuestionDetailDto` / `QuestionFullDto`
 - **`PaginationHelper`** — расчёт `totalPages`, `hasNextPage`, `hasPreviousPage`
 
 ---
@@ -592,23 +576,19 @@ public interface IUserService
 
 1. Клиент получает тест через `GET /api/tests/{id}`
 2. Пользователь выбирает ответ на вопрос
-3. `POST /api/tests/{id}/submit` — сервер находит правильный ответ через TQA, сохраняет Result
-4. Ответ: `correctAnswerOrder`; опционально `explanation` (из TQA, если задано; не отдаётся в `GET /tests/{id}`)
+3. `POST /api/tests/{id}/submit` — сервер находит ответ по `Questions.Order` / `Answers.Order`, сохраняет Result
+4. Ответ: `correctAnswerOrder`; опционально `explanation` (из `Questions.Explanation`, если задано; не отдаётся в `GET /tests/{id}`)
 5. Клиент сравнивает, показывает результат
 6. Можно отвечать в любом порядке, переотвечивать
 7. `GET /api/tests/{id}/result` — полная статистика
 
 ### Статистика пользователя
 
-- **Пройденный тест** — пользователь ответил на все текущие вопросы теста (`Results.Count == DISTINCT QuestionOrder` в TQA).
+- **Пройденный тест** — пользователь ответил на все текущие вопросы теста (`UserTestResults.CorrectAnswer + IncorrectAnswer == Tests.QuestionsCount`).
 - **Балл прохождения**: `correctAnswers / totalQuestions × 100`.
 - **totalPassedOwn** / **averageScoreOwn** — полностью пройденные тесты, где пользователь является автором (`Tests.AuthorId = userId`).
 - **totalPassedOthers** / **averageScoreOthers** — полностью пройденные тесты других авторов.
 - История (`GetUserResults`) — одна запись на `(UserId, TestId)`; после `DeleteResult` старая попытка не хранится.
-
-### Ошибки дедупликации
-
-При параллельном создании одинакового `Text` возможен конфликт UNIQUE. Паттерн: find → insert → при ошибке UNIQUE → find снова. В тестах — одна транзакция на сценарий.
 
 ### JWT-аутентификация
 
@@ -704,7 +684,7 @@ public interface IUserService
 - Минимум 1 вопрос
 - Минимум 2 ответа на вопрос
 - `correct` — валидный индекс в массиве `answers`
-- `explanation` — необязательное пояснение; хранится в `TestQuestionAnswers.Explanation` (per-test); клиент показывает после ответа (настройки видимости в localStorage)
+- `explanation` — необязательное пояснение; хранится в `Questions.Explanation` (per-test); клиент показывает после ответа (настройки видимости в localStorage)
 
 ---
 
@@ -717,11 +697,11 @@ public interface IUserService
 - `TestService`, `ResultService`, `UserService`, `ApplicationService`, `AuthService`
 - Репозитории с пагинацией и агрегациями
 - EF Core миграции в `VibeTest.Server/Data/Migrations/` (при старте — `Migrate()`, в `Testing` — `EnsureCreated()`)
-- Интеграционные тесты сервисов в `VibeTest.Tests` на SQLite
+- Интеграционные тесты сервисов в `VibeTest.Tests` на PostgreSQL (Testcontainers или внешний сервер)
 
 | Сервис | Покрытые сценарии |
 |--------|-------------------|
-| TestService | CreateTest + дедупликация; AppendQuestions; GetTestDetail vs GetTestFull |
+| TestService | CreateTest; AppendQuestions; GetTestDetail vs GetTestFull; cascade delete |
 | ResultService | Submit + переответ; дорешивание после AppendQuestions; DeleteResult |
 | UserService | GetStats, own/others passing stats |
 | ApplicationService | link/internal заявки; hideResults; анонимное и персональное прохождение |

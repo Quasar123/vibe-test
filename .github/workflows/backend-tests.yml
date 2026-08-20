@@ -1,0 +1,38 @@
+name: Backend Tests
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: vibetest
+          POSTGRES_PASSWORD: changeme
+          POSTGRES_DB: vibetest_tests
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U vibetest -d vibetest_tests"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      ConnectionStrings__DefaultConnection: Host=localhost;Port=5432;Database=vibetest_tests;Username=vibetest;Password=changeme
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Run integration tests
+        run: dotnet test VibeTest/VibeTest.Tests/VibeTest.Tests.csproj

@@ -9,33 +9,30 @@ public class ApplicationRepository(AppDbContext db) : IApplicationRepository
     private const string ListBaseCte = """
         WITH app_scores AS (
             SELECT
-                ta.Id AS ApplicationId,
-                ta.Token,
-                ta.Title,
-                ta.Type,
-                ta.TestId,
-                t.Name AS TestName,
-                ta.CreatedAt,
-                ta.CompletedAt,
-                ta.HideResultsFromParticipant,
-                ta.RecipientUserId,
-                t.QuestionsCount AS TotalQuestions,
-                COALESCE(SUM(CASE WHEN sel.IsCorrect = 1 THEN 1 ELSE 0 END), 0) AS CorrectAnswers,
+                ta.id AS application_id,
+                ta.token,
+                ta.title,
+                ta.type,
+                ta.test_id,
+                t.name AS test_name,
+                ta.created_at,
+                ta.completed_at,
+                ta.hide_results_from_participant,
+                ta.recipient_user_id,
+                t.questions_count AS total_questions,
+                COALESCE(SUM(CASE WHEN sel.is_correct = TRUE THEN 1 ELSE 0 END), 0) AS correct_answers,
                 CASE
-                    WHEN t.QuestionsCount > 0 THEN
-                        CAST(COALESCE(SUM(CASE WHEN sel.IsCorrect = 1 THEN 1 ELSE 0 END), 0) AS REAL)
-                            / t.QuestionsCount * 100.0
+                    WHEN t.questions_count > 0 THEN
+                        CAST(COALESCE(SUM(CASE WHEN sel.is_correct = TRUE THEN 1 ELSE 0 END), 0) AS double precision)
+                            / t.questions_count * 100.0
                     ELSE 0.0
-                END AS ScorePercent
-            FROM TestApplications ta
-            INNER JOIN Tests t ON t.Id = ta.TestId
-            LEFT JOIN ApplicationResults ar ON ar.ApplicationId = ta.Id
-            LEFT JOIN TestQuestionAnswers sel
-                ON sel.TestId = ta.TestId
-               AND sel.QuestionId = ar.QuestionId
-               AND sel.AnswerId = ar.AnswerId
-            WHERE ta.AuthorId = {0}
-            GROUP BY ta.Id, ta.Token, ta.Title, ta.Type, ta.TestId, t.Name, ta.CreatedAt, ta.CompletedAt, ta.HideResultsFromParticipant, ta.RecipientUserId, t.QuestionsCount
+                END AS score_percent
+            FROM test_applications ta
+            INNER JOIN tests t ON t.id = ta.test_id
+            LEFT JOIN application_results ar ON ar.application_id = ta.id
+            LEFT JOIN answers sel ON sel.id = ar.answer_id
+            WHERE ta.author_id = {0}
+            GROUP BY ta.id, ta.token, ta.title, ta.type, ta.test_id, t.name, ta.created_at, ta.completed_at, ta.hide_results_from_participant, ta.recipient_user_id, t.questions_count
         )
         """;
 
@@ -50,11 +47,8 @@ public class ApplicationRepository(AppDbContext db) : IApplicationRepository
             .Include(a => a.Test)
             .ThenInclude(t => t.Author)
             .Include(a => a.Test)
-            .ThenInclude(t => t.QuestionAnswers)
-            .ThenInclude(tqa => tqa.Question)
-            .Include(a => a.Test)
-            .ThenInclude(t => t.QuestionAnswers)
-            .ThenInclude(tqa => tqa.Answer)
+            .ThenInclude(t => t.Questions)
+            .ThenInclude(q => q.Answers)
             .FirstOrDefaultAsync(a => a.Token == token, cancellationToken);
 
     public Task<TestApplication?> GetByTokenForAccessAsync(Guid token, CancellationToken cancellationToken = default) =>
@@ -67,7 +61,7 @@ public class ApplicationRepository(AppDbContext db) : IApplicationRepository
     {
         var row = await db.Database
             .SqlQueryRaw<ScalarIntRow>(
-                ListBaseCte + "SELECT COUNT(*) AS Value FROM app_scores",
+                ListBaseCte + """SELECT COUNT(*) AS value FROM app_scores""",
                 authorId)
             .FirstAsync(cancellationToken);
 
@@ -84,21 +78,21 @@ public class ApplicationRepository(AppDbContext db) : IApplicationRepository
                 ListBaseCte +
                 """
                 SELECT
-                    ApplicationId AS Id,
-                    Token,
-                    Title,
-                    Type,
-                    TestId,
-                    TestName,
-                    CreatedAt,
-                    CompletedAt,
-                    HideResultsFromParticipant,
-                    RecipientUserId,
-                    TotalQuestions,
-                    CorrectAnswers,
-                    ScorePercent
+                    application_id AS id,
+                    token AS token,
+                    title AS title,
+                    type AS type,
+                    test_id AS test_id,
+                    test_name AS test_name,
+                    created_at AS created_at,
+                    completed_at AS completed_at,
+                    hide_results_from_participant AS hide_results_from_participant,
+                    recipient_user_id AS recipient_user_id,
+                    total_questions AS total_questions,
+                    correct_answers AS correct_answers,
+                    score_percent AS score_percent
                 FROM app_scores
-                ORDER BY CreatedAt DESC
+                ORDER BY created_at DESC
                 LIMIT {1} OFFSET {2}
                 """,
                 authorId,
@@ -110,7 +104,7 @@ public class ApplicationRepository(AppDbContext db) : IApplicationRepository
     {
         var row = await db.Database
             .SqlQueryRaw<ScalarIntRow>(
-                "SELECT COUNT(*) AS Value FROM TestApplications WHERE Type = {0} AND RecipientUserId = {1}",
+                """SELECT COUNT(*) AS value FROM test_applications WHERE type = {0} AND recipient_user_id = {1}""",
                 (int)ApplicationType.InternalUser,
                 recipientUserId)
             .FirstAsync(cancellationToken);
@@ -127,20 +121,20 @@ public class ApplicationRepository(AppDbContext db) : IApplicationRepository
             .SqlQueryRaw<IncomingApplicationListItemRow>(
                 """
                 SELECT
-                    ta.Id AS Id,
-                    ta.Token AS Token,
-                    ta.Title AS Title,
-                    u.DisplayName AS AuthorName,
-                    ta.TestId AS TestId,
-                    t.Name AS TestName,
-                    ta.CreatedAt AS CreatedAt,
-                    ta.CompletedAt AS CompletedAt,
-                    ta.HideResultsFromParticipant AS HideResultsFromParticipant
-                FROM TestApplications ta
-                INNER JOIN Tests t ON t.Id = ta.TestId
-                INNER JOIN Users u ON u.Id = ta.AuthorId
-                WHERE ta.Type = {0} AND ta.RecipientUserId = {1}
-                ORDER BY ta.CreatedAt DESC
+                    ta.id AS id,
+                    ta.token AS token,
+                    ta.title AS title,
+                    u.display_name AS author_name,
+                    ta.test_id AS test_id,
+                    t.name AS test_name,
+                    ta.created_at AS created_at,
+                    ta.completed_at AS completed_at,
+                    ta.hide_results_from_participant AS hide_results_from_participant
+                FROM test_applications ta
+                INNER JOIN tests t ON t.id = ta.test_id
+                INNER JOIN users u ON u.id = ta.author_id
+                WHERE ta.type = {0} AND ta.recipient_user_id = {1}
+                ORDER BY ta.created_at DESC
                 LIMIT {2} OFFSET {3}
                 """,
                 (int)ApplicationType.InternalUser,
@@ -201,27 +195,24 @@ public class ApplicationRepository(AppDbContext db) : IApplicationRepository
             .SqlQueryRaw<AnsweredQuestionRow>(
                 """
                 SELECT
-                    sel.QuestionOrder AS QuestionOrder,
-                    sel.AnswerOrder AS SelectedAnswerOrder,
-                    correct.AnswerOrder AS CorrectAnswerOrder,
-                    sel.IsCorrect AS IsCorrect,
-                    expl.Explanation AS Explanation
-                FROM ApplicationResults ar
-                INNER JOIN TestApplications ta ON ta.Id = ar.ApplicationId
-                INNER JOIN TestQuestionAnswers sel
-                    ON sel.TestId = ta.TestId
-                   AND sel.QuestionId = ar.QuestionId
-                   AND sel.AnswerId = ar.AnswerId
-                INNER JOIN TestQuestionAnswers correct
-                    ON correct.TestId = ta.TestId
-                   AND correct.QuestionOrder = sel.QuestionOrder
-                   AND correct.IsCorrect = 1
-                LEFT JOIN TestQuestionAnswers expl
-                    ON expl.TestId = ta.TestId
-                   AND expl.QuestionOrder = sel.QuestionOrder
-                   AND expl.AnswerOrder = 0
-                WHERE ar.ApplicationId = {0}
-                ORDER BY sel.QuestionOrder
+                    q."order" AS question_order,
+                    sel."order" AS selected_answer_order,
+                    correct."order" AS correct_answer_order,
+                    sel.is_correct AS is_correct,
+                    q.explanation AS explanation
+                FROM application_results ar
+                INNER JOIN test_applications ta ON ta.id = ar.application_id
+                INNER JOIN questions q
+                    ON q.id = ar.question_id
+                   AND q.test_id = ta.test_id
+                INNER JOIN answers sel
+                    ON sel.id = ar.answer_id
+                   AND sel.question_id = ar.question_id
+                INNER JOIN answers correct
+                    ON correct.question_id = q.id
+                   AND correct.is_correct = TRUE
+                WHERE ar.application_id = {0}
+                ORDER BY q."order"
                 """,
                 applicationId)
             .ToListAsync(cancellationToken);
@@ -233,22 +224,19 @@ public class ApplicationRepository(AppDbContext db) : IApplicationRepository
             .SqlQueryRaw<ApplicationResultSummaryRow>(
                 """
                 SELECT
-                    t.Id AS TestId,
-                    t.Name AS TestName,
-                    t.QuestionsCount AS TotalQuestions,
-                    COALESCE(SUM(CASE WHEN sel.IsCorrect = 1 THEN 1 ELSE 0 END), 0) AS CorrectAnswers,
-                    COALESCE(SUM(CASE WHEN sel.IsCorrect = 0 THEN 1 ELSE 0 END), 0) AS IncorrectAnswers,
-                    MIN(ar.AnsweredAt) AS StartedAt,
-                    ta.CompletedAt AS CompletedAt
-                FROM TestApplications ta
-                INNER JOIN Tests t ON t.Id = ta.TestId
-                LEFT JOIN ApplicationResults ar ON ar.ApplicationId = ta.Id
-                LEFT JOIN TestQuestionAnswers sel
-                    ON sel.TestId = ta.TestId
-                   AND sel.QuestionId = ar.QuestionId
-                   AND sel.AnswerId = ar.AnswerId
-                WHERE ta.Id = {0}
-                GROUP BY t.Id, t.Name, t.QuestionsCount, ta.CompletedAt
+                    t.id AS test_id,
+                    t.name AS test_name,
+                    t.questions_count AS total_questions,
+                    COALESCE(SUM(CASE WHEN sel.is_correct = TRUE THEN 1 ELSE 0 END), 0) AS correct_answers,
+                    COALESCE(SUM(CASE WHEN sel.is_correct = FALSE THEN 1 ELSE 0 END), 0) AS incorrect_answers,
+                    MIN(ar.answered_at) AS started_at,
+                    ta.completed_at AS completed_at
+                FROM test_applications ta
+                INNER JOIN tests t ON t.id = ta.test_id
+                LEFT JOIN application_results ar ON ar.application_id = ta.id
+                LEFT JOIN answers sel ON sel.id = ar.answer_id
+                WHERE ta.id = {0}
+                GROUP BY t.id, t.name, t.questions_count, ta.completed_at
                 """,
                 applicationId)
             .FirstOrDefaultAsync(cancellationToken);
@@ -257,7 +245,7 @@ public class ApplicationRepository(AppDbContext db) : IApplicationRepository
     {
         var row = await db.Database
             .SqlQueryRaw<ScalarIntRow>(
-                "SELECT QuestionsCount AS Value FROM Tests WHERE Id = {0}",
+                """SELECT questions_count AS value FROM tests WHERE id = {0}""",
                 testId)
             .FirstOrDefaultAsync(cancellationToken);
 
@@ -268,7 +256,7 @@ public class ApplicationRepository(AppDbContext db) : IApplicationRepository
     {
         var row = await db.Database
             .SqlQueryRaw<ScalarIntRow>(
-                "SELECT COUNT(*) AS Value FROM ApplicationResults WHERE ApplicationId = {0}",
+                """SELECT COUNT(*) AS value FROM application_results WHERE application_id = {0}""",
                 applicationId)
             .FirstOrDefaultAsync(cancellationToken);
 

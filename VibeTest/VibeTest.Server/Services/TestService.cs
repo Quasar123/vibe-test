@@ -9,7 +9,6 @@ namespace VibeTest.Server.Services;
 
 public class TestService(
     ITestRepository tests,
-    IQuestionAnswerRepository questionAnswers,
     ILogger<TestService> logger) : ITestService
 {
     public async Task<PagedResponse<TestListItem>> GetPublicTests(int page, int pageSize, string sortBy, string order)
@@ -64,7 +63,7 @@ public class TestService(
             UpdatedAt = now
         };
 
-        await AddQuestionsAsync(test, request.Questions, startQuestionOrder: 0);
+        AddQuestions(test, request.Questions, startQuestionOrder: 0);
         await tests.AddAsync(test);
         await tests.SaveChangesAsync();
 
@@ -93,7 +92,7 @@ public class TestService(
         EnsureAuthor(test, authorId);
 
         var maxOrder = await tests.GetMaxQuestionOrderAsync(testId);
-        await AddQuestionsAsync(test, request.Questions, startQuestionOrder: maxOrder + 1);
+        AddQuestions(test, request.Questions, startQuestionOrder: maxOrder + 1);
         test.QuestionsCount += request.Questions.Count;
         test.UpdatedAt = DateTime.UtcNow;
         await tests.SaveChangesAsync();
@@ -228,7 +227,7 @@ public class TestService(
             Description = test.Description,
             IsPublic = test.IsPublic,
             Difficulty = test.Difficulty,
-            Questions = TqaGrouper.ToFullQuestions(test.QuestionAnswers)
+            Questions = QuestionMapper.ToFullQuestions(test.Questions)
         };
     }
 
@@ -249,36 +248,38 @@ public class TestService(
             Description = test.Description,
             IsPublic = test.IsPublic,
             Difficulty = test.Difficulty,
-            Questions = TqaGrouper.ToFullQuestions(test.QuestionAnswers)
+            Questions = QuestionMapper.ToFullQuestions(test.Questions)
         };
     }
 
-    private async Task AddQuestionsAsync(Test test, IReadOnlyList<QuestionInput> questions, int startQuestionOrder)
+    private static void AddQuestions(Test test, IReadOnlyList<QuestionInput> questions, int startQuestionOrder)
     {
         for (var qi = 0; qi < questions.Count; qi++)
         {
             var questionInput = questions[qi];
-            var question = await questionAnswers.FindOrCreateQuestionAsync(questionInput.Text.Trim());
             var explanation = string.IsNullOrWhiteSpace(questionInput.Explanation)
                 ? null
                 : questionInput.Explanation.Trim();
 
+            var question = new Question
+            {
+                Test = test,
+                Text = questionInput.Text.Trim(),
+                Order = startQuestionOrder + qi,
+                Explanation = explanation
+            };
+
             for (var ai = 0; ai < questionInput.Answers.Count; ai++)
             {
-                var answerText = questionInput.Answers[ai];
-                var answer = await questionAnswers.FindOrCreateAnswerAsync(answerText.Trim());
-
-                test.QuestionAnswers.Add(new TestQuestionAnswer
+                question.Answers.Add(new Answer
                 {
-                    Test = test,
-                    Question = question,
-                    Answer = answer,
-                    QuestionOrder = startQuestionOrder + qi,
-                    AnswerOrder = ai,
-                    IsCorrect = ai == questionInput.Correct,
-                    Explanation = ai == 0 ? explanation : null
+                    Text = questionInput.Answers[ai].Trim(),
+                    Order = ai,
+                    IsCorrect = ai == questionInput.Correct
                 });
             }
+
+            test.Questions.Add(question);
         }
     }
 
@@ -329,7 +330,7 @@ public class TestService(
         Name = test.Name,
         Description = test.Description,
         AuthorName = test.Author.DisplayName,
-        Questions = TqaGrouper.ToDetailQuestions(test.QuestionAnswers)
+        Questions = QuestionMapper.ToDetailQuestions(test.Questions)
     };
 
     private static TestResponse MapResponse(Test test) => new()

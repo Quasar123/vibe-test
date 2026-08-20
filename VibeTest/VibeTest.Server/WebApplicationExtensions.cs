@@ -16,10 +16,7 @@ public static class WebApplicationExtensions
         using (var scope = app.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            if (app.Environment.IsEnvironment("Testing"))
-                db.Database.EnsureCreated();
-            else
-                db.Database.Migrate();
+            db.Database.Migrate();
         }
 
         app.Use(async (context, next) =>
@@ -43,7 +40,9 @@ public static class WebApplicationExtensions
         });
         app.UseMiddleware<DomainExceptionMiddleware>();
 
-        if (!app.Environment.IsEnvironment("E2E") && !app.Environment.IsEnvironment("Testing"))
+        if (!app.Environment.IsEnvironment("E2E")
+            && !app.Environment.IsEnvironment("Testing")
+            && !app.Environment.IsEnvironment("RateLimitTesting"))
         {
             app.UseHttpsRedirection();
         }

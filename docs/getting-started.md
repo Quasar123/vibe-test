@@ -7,6 +7,7 @@
 | [.NET SDK](https://dotnet.microsoft.com/download) | 10 |
 | [Node.js](https://nodejs.org/) | 22 |
 | npm | поставляется с Node.js |
+| Docker | для PostgreSQL (`docker/compose.infra.yml`) и интеграционных тестов |
 
 Для full-режима в dev также используется ASP.NET dev certificate (Vite создаёт его автоматически через `dotnet dev-certs`).
 
@@ -37,6 +38,13 @@ VITE_BASE_PATH=/
 
 ### Вариант A: два терминала
 
+**Терминал 0 — PostgreSQL (один раз на сессию):**
+
+```bash
+# из корня репозитория
+docker compose -f docker/compose.infra.yml up -d
+```
+
 **Терминал 1 — API:**
 
 ```bash
@@ -44,7 +52,7 @@ cd VibeTest
 dotnet run --project VibeTest.Server
 ```
 
-API по умолчанию слушает `https://localhost:7215` и `http://localhost:5032`. При старте применяются миграции EF к файлу `VibeTest.Server/db/vibetest.db`.
+API по умолчанию слушает `https://localhost:7215` и `http://localhost:5032`. При старте применяются миграции EF к PostgreSQL (см. `ConnectionStrings:DefaultConnection` в `appsettings.json`).
 
 **Терминал 2 — фронтенд:**
 

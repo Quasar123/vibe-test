@@ -2,17 +2,25 @@
 
 ## Интеграционные тесты (.NET)
 
+Перед запуском поднимите PostgreSQL (см. [`docker/compose.infra.yml`](../docker/compose.infra.yml)) или убедитесь, что Docker доступен для Testcontainers.
+
 ```bash
+# один раз: инфраструктура БД (PostgreSQL на localhost:5432)
+docker compose -f docker/compose.infra.yml up -d
+
+# опционально: переопределить строку подключения для тестов
+# set ConnectionStrings__DefaultConnection=Host=localhost;Port=5432;Database=vibetest;Username=vibetest;Password=changeme
+
 cd VibeTest
 dotnet test
 ```
 
 Проект `VibeTest.Tests` содержит:
 
-- тесты сервисов (`TestService`, `ResultService`, `UserService`, `ApplicationService`) на SQLite;
+- тесты сервисов (`TestService`, `ResultService`, `UserService`, `ApplicationService`) на PostgreSQL;
 - тесты API через `WebApplicationFactory` (`Auth`, `Tests`, `Applications`, `Users`, rate limiting, health endpoints).
 
-В среде `Testing` БД создаётся через `EnsureCreated()`; в остальных — `Migrate()`.
+Если переменная `ConnectionStrings__DefaultConnection` не задана, тесты поднимают PostgreSQL через Testcontainers (нужен Docker). Каждый тестовый сценарий получает изолированную базу; миграции применяются через `Migrate()`.
 
 ## E2E (Playwright)
 
@@ -26,7 +34,7 @@ npm run e2e           # оба набора подряд
 ```
 
 Конфиги: `playwright.guest.config.ts`, `playwright.full.config.ts`.  
-Full E2E перед запуском очищает `vibetest.e2e.db` (`e2e/full/global-setup.ts`).
+Full E2E использует PostgreSQL (`ASPNETCORE_ENVIRONMENT=E2E`); перед запуском поднимите `docker compose -f docker/compose.infra.yml up -d` или задайте `ConnectionStrings__DefaultConnection`.
 
 Сборка для E2E:
 
@@ -109,7 +117,7 @@ JWT-токены в full-режиме хранятся отдельно в `Auth
 ```json
 {
   "ConnectionStrings": {
-    "DefaultConnection": "Data Source=db/vibetest.db"
+    "DefaultConnection": "Host=localhost;Port=5432;Database=vibetest;Username=vibetest;Password=changeme"
   },
   "Jwt": {
     "Key": "dev-secret-key-change-in-production-32chars!",
@@ -134,7 +142,7 @@ JWT-токены в full-режиме хранятся отдельно в `Auth
 ### Health и observability
 
 - `GET /health/live` — liveness (без проверок зависимостей)
-- `GET /health/ready` — readiness с проверкой SQLite через EF Core
+- `GET /health/ready` — readiness с проверкой PostgreSQL через EF Core
 - Serilog request logging обогащается полями `RequestHost`, `RequestScheme`, `RemoteIp`, `UserId`
 - превышение rate limit логируется с методом, путём и partition key
 
@@ -145,22 +153,13 @@ JWT-токены в full-режиме хранятся отдельно в `Auth
 Логи всегда пишутся в консоль. Persistent sink выбирается через `LogOutput:Destination`:
 
 - `File` — файл `VibeTest.Server/logs/vibetest-<дата>.log` (rolling, 14 дней)
-- `SQLite` — база `VibeTest.Server/logs/vibetest-logs.db`, таблица `Logs`
-- `Both` — одновременно файл и SQLite
 - `None` — только консоль
 
-По умолчанию используется `File`; в `Development` — `SQLite`; в `Testing` и `E2E` — `None`. Для локального переключения поменяйте `LogOutput:Destination` в `appsettings.Development.json` или задайте переменную окружения `LogOutput__Destination`.
+По умолчанию используется `File`; в `Testing` и `E2E` — `None`. Для локального переключения поменяйте `LogOutput:Destination` в `appsettings.Development.json` или задайте переменную окружения `LogOutput__Destination`.
 
 В `Development` дополнительно логируются SQL-запросы EF Core (категория `Microsoft.EntityFrameworkCore.Database.Command`) с текстом запроса и значениями параметров. В production и тестовых средах SQL не логируется.
 
-Все логи внутри одного HTTP-запроса связаны общим `RequestId` (`HttpContext.TraceIdentifier`): HTTP completion log, сервисные логи и SQL-запросы EF Core получают одинаковый ключ. Для поиска в SQLite:
-
-```sql
-SELECT Timestamp, Level, Message, Properties
-FROM Logs
-WHERE Properties LIKE '%<RequestId>%'
-ORDER BY Timestamp;
-```
+Все логи внутри одного HTTP-запроса связаны общим `RequestId` (`HttpContext.TraceIdentifier`): HTTP completion log, сервисные логи и SQL-запросы EF Core получают одинаковый ключ.
 
 ## Структура фронтенда (кратко)
 
